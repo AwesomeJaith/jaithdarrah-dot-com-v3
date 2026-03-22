@@ -21,6 +21,12 @@ const projects = [
     projectOneLiner: "Git diff for Discord message edits.",
     projectLink: "https://github.com/AwesomeJaith/noodlebot",
   },
+  {
+    projectName: "Clash of Clans Base Finder",
+    projectOneLiner: "A CLI to automatically find good bases to loot.",
+    projectLink:
+      "https://github.com/AwesomeJaith/Clash-of-Clans-Farming-Assistant",
+  },
 ]
 
 function ProjectsSection() {
