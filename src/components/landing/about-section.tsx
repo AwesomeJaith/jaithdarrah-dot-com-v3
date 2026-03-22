@@ -1,4 +1,11 @@
 function AboutSection() {
+  const graduationDate = new Date("May 11 2026")
+  const now = new Date()
+  const daysUntilGraduation = Math.ceil(
+    (graduationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  )
+  const hasGraduated = now >= graduationDate
+
   return (
     <div className="w-full max-w-3xl">
       <div className="flex flex-col gap-8">
@@ -14,10 +21,11 @@ function AboutSection() {
         </div>
         <div>
           <p>
-            Chicago area local graduating with a B.S. in Computer Science from
-            ASU {/** expand to Arizona State University on hover */}
-            in xxx days on May 11, 2026. Clash Royale, Chess, Code, and speed
-            typing nerd.
+            {hasGraduated
+              ? "Chicago area local who graduated with a Bachelor of Science in Computer Science from Arizona State University on May 11, 2026."
+              : `Chicago area local graduating with a Bachelor of Science in Computer Science from Arizona State University in ${daysUntilGraduation} days on May 11, 2026.`}{" "}
+            {/** expand ASU to Arizona State University on hover */}
+            Clash Royale, chess, code, and speed typing nerd.
             {/** Links or some kind of interactivity like chess puzzles */}
           </p>
         </div>
