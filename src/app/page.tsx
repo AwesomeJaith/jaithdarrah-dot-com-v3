@@ -1,7 +1,7 @@
-import { AboutSection } from "@/components/landing/about-section"
+import { AboutSection } from "@/components/landing-page/about-section"
 import { Header } from "@/components/header"
-import { ProjectsSection } from "@/components/landing/projects-section"
-import { WorkSection } from "@/components/landing/work-section"
+import { ProjectsSection } from "@/components/landing-page/projects-section"
+import { WorkSection } from "@/components/landing-page/work-section"
 import { Footer } from "@/components/footer"
 
 export default function Page() {
