@@ -1,5 +1,9 @@
 function WorkSection() {
-  return <div>Work Section</div>
+  return (
+    <div className="w-full max-w-3xl">
+      <div>Work Section</div>
+    </div>
+  )
 }
 
 export { WorkSection }
