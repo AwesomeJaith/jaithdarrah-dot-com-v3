@@ -35,7 +35,7 @@ const socials = [
 // TODO: Improve feel of social icons. Don't quite fit with the vibe.
 function Footer() {
   return (
-    <footer className="w-full max-w-3xl">
+    <footer className="w-full max-w-3xl py-16">
       I&apos;m friendly and don&apos;t bite. Feel free to say hello!{" "}
       <span className="inline-flex align-middle">
         {socials.map((social) => (

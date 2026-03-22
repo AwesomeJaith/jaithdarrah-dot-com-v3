@@ -3,7 +3,7 @@ import { WorkExperience } from "../work-experience"
 const jobs = [
   {
     company: "Mangrove",
-    companyLink: "",
+    companyLink: "https://www.mangrove.ai",
     position: "Software Engineer Contractor",
     description:
       "Revamped Mangrove's landing page, trading dashboard, and docs. Improved reliability of Mangrove's services and squashed bugs.",
