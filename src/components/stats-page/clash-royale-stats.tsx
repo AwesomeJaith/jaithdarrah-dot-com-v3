@@ -381,6 +381,7 @@ function ClashRoyaleStats() {
         data={dummyData}
         label="Clash Royale"
         activityType="battles"
+        color="#ff393c"
       />
     </div>
   )

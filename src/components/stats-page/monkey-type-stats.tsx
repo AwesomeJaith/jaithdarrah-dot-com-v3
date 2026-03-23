@@ -381,6 +381,7 @@ function MonkeyTypeStats() {
         data={dummyData}
         label="MonkeyType"
         activityType="tests"
+        color="#5a65ea"
       />
     </div>
   )

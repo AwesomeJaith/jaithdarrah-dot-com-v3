@@ -7,17 +7,20 @@ type Props = {
   data: { countsByDay: (number | null)[]; lastDay: number }
   label?: string
   activityType?: string
+  color?: string
 }
 
 type Tooltip = { x: number; y: number; text: string }
 
-const levelColors: Record<string, string> = {
-  filler: "transparent",
-  "0": "var(--background)",
-  "1": "color-mix(in srgb, var(--primary) 20%, var(--muted))",
-  "2": "color-mix(in srgb, var(--primary) 50%, var(--muted))",
-  "3": "color-mix(in srgb, var(--primary) 75%, var(--muted))",
-  "4": "var(--primary)",
+function getLevelColors(color: string): Record<string, string> {
+  return {
+    filler: "transparent",
+    "0": "var(--background)",
+    "1": `color-mix(in srgb, ${color} 20%, var(--muted))`,
+    "2": `color-mix(in srgb, ${color} 50%, var(--muted))`,
+    "3": `color-mix(in srgb, ${color} 75%, var(--muted))`,
+    "4": color,
+  }
 }
 
 const DAY_NAMES = [
@@ -30,7 +33,13 @@ const DAY_NAMES = [
   "saturday",
 ]
 
-function ActivityCalendar({ data, label, activityType = "activities" }: Props) {
+function ActivityCalendar({
+  data,
+  label,
+  activityType = "activities",
+  color = "var(--primary)",
+}: Props) {
+  const levelColors = getLevelColors(color)
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
   const [isMobile, setIsMobile] = useState(
     () =>

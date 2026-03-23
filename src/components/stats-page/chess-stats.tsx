@@ -377,7 +377,12 @@ function ChessStats() {
   return (
     <div className="flex flex-col gap-2">
       <h2>Chess</h2>
-      <ActivityCalendar data={dummyData} label="Chess" activityType="games" />
+      <ActivityCalendar
+        data={dummyData}
+        label="Chess"
+        activityType="games"
+        color="#bf811d"
+      />
     </div>
   )
 }

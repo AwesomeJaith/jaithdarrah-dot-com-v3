@@ -381,6 +381,7 @@ function GitHubStats() {
         data={dummyData}
         label="GitHub"
         activityType="commits"
+        color="#56d364"
       />
     </div>
   )
