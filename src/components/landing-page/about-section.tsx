@@ -7,16 +7,26 @@ function AboutSection() {
   const hasGraduated = now >= graduationDate
 
   return (
-    <div className="w-full max-w-3xl">
+    <div className="w-full max-w-3xl text-muted-foreground">
       <div className="flex flex-col gap-8">
         <div className="text-xl">
           <h1>
-            <span>Jaith Darrah</span>. Software engineer with an eye for
-            details. {/** Add some animated eye here later */}
+            <span className="text-primary">Jaith Darrah</span>. Software
+            engineer with an eye for details.{" "}
+            {/** Add some animated eye here later */}
           </h1>
           <h2>
             Currently engineering part time at{" "}
-            <span className="italic">Mangrove</span>.
+            <span className="text-primary italic underline decoration-muted-foreground decoration-wavy underline-offset-6 hover:decoration-primary">
+              <a
+                href="https://mangrove.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Mangrove
+              </a>
+            </span>
+            .
           </h2>
         </div>
         <div>

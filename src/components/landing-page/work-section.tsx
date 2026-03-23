@@ -22,7 +22,7 @@ const jobs = [
 
 function WorkSection() {
   return (
-    <div className="w-full max-w-3xl">
+    <div className="flex w-full max-w-3xl flex-col gap-2">
       <div>Work</div>
       <div className="flex flex-col gap-4">
         {jobs.map((job) => (
