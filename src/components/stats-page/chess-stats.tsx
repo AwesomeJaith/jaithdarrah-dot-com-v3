@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache"
 import { ActivityCalendar } from "./activity-calendar"
 
 type ChessGame = {
@@ -16,6 +17,8 @@ async function fetchChessContributions(): Promise<{
   countsByDay: (number | null)[]
   lastDay: number
 }> {
+  "use cache"
+  cacheLife("hours")
   const now = new Date()
   const lastDay = new Date(
     Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
@@ -36,13 +39,21 @@ async function fetchChessContributions(): Promise<{
     const archiveDate = new Date(
       Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)
     )
-    return archiveDate >= new Date(Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth(), 1))
+    return (
+      archiveDate >=
+      new Date(Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth(), 1))
+    )
   })
 
   // Fetch all relevant months in parallel
+  // Current month revalidates hourly; past months are effectively immutable
+  const currentMonth = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}`
   const monthlyResults = await Promise.all(
     relevantArchives.map(async (url) => {
-      const res = await fetch(url, { next: { revalidate: 3600 } })
+      const isCurrent = url.endsWith(currentMonth)
+      const res = await fetch(url, {
+        next: { revalidate: isCurrent ? 3600 : 86400 * 30 },
+      })
       const data: ChessMonthlyResponse = await res.json()
       return data.games
     })

@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache"
 import { turso } from "@/lib/turso"
 import { ActivityCalendar } from "./activity-calendar"
 
@@ -5,6 +6,8 @@ async function fetchClashRoyaleActivity(): Promise<{
   countsByDay: (number | null)[]
   lastDay: number
 }> {
+  "use cache"
+  cacheLife("hours")
   const now = new Date()
   const lastDay = new Date(
     Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())

@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache"
 import { ActivityCalendar } from "./activity-calendar"
 
 type MonkeyTypeResponse = {
@@ -12,6 +13,8 @@ async function fetchMonkeyTypeActivity(): Promise<{
   countsByDay: (number | null)[]
   lastDay: number
 }> {
+  "use cache"
+  cacheLife("hours")
   const apeKey = process.env.APE_KEY
   if (!apeKey) throw new Error("APE_KEY not configured")
 

@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache"
 import { ActivityCalendar } from "./activity-calendar"
 
 type GitHubContribution = {
@@ -15,6 +16,8 @@ async function fetchGitHubContributions(): Promise<{
   countsByDay: (number | null)[]
   lastDay: number
 }> {
+  "use cache"
+  cacheLife("hours")
   const res = await fetch(
     "https://github-contributions-api.jogruber.de/v4/AwesomeJaith",
     { next: { revalidate: 3600 } }
