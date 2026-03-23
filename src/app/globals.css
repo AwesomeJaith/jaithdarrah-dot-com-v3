@@ -127,4 +127,8 @@
   html {
     @apply font-sans;
     }
+  ::selection {
+    background-color: #4cda82;
+    color: #212121;
+    }
 }
