@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { LastUpdated } from "@/components/last-updated"
 import { cn } from "@/lib/utils"
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" })
@@ -40,7 +41,9 @@ export default function RootLayout({
           <div className="flex min-h-screen flex-col items-center gap-8 px-16">
             <Header />
             {children}
-            <Footer />
+            <Footer>
+              <LastUpdated />
+            </Footer>
           </div>
         </ThemeProvider>
       </body>

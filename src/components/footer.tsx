@@ -33,15 +33,18 @@ const socials = [
 ]
 
 // TODO: Improve feel of social icons. Don't quite fit with the vibe.
-function Footer() {
+function Footer({ children }: { children?: React.ReactNode }) {
   return (
-    <footer className="w-full max-w-3xl py-16">
-      I&apos;m friendly and don&apos;t bite. Feel free to say hello!{" "}
-      <span className="inline-flex align-middle">
-        {socials.map((social) => (
-          <SocialIcon key={social.label} {...social} />
-        ))}
-      </span>
+    <footer className="flex w-full max-w-3xl flex-col gap-4 py-16">
+      <div>
+        I&apos;m friendly and don&apos;t bite. Feel free to say hello!{" "}
+        <span className="inline-flex align-middle">
+          {socials.map((social) => (
+            <SocialIcon key={social.label} {...social} />
+          ))}
+        </span>
+      </div>
+      {children}
     </footer>
   )
 }
