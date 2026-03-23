@@ -31,7 +31,7 @@ function Project({ projectName, projectOneLiner, projectLink }: ProjectProps) {
           {projectName}
         </span>
       </div>
-      <span className="shrink-0 text-sm whitespace-nowrap text-muted-foreground">
+      <span className="hidden shrink-0 text-sm whitespace-nowrap text-muted-foreground sm:block">
         {projectOneLiner}
       </span>
     </a>

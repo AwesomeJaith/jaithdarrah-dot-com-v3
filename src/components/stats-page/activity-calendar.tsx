@@ -1,7 +1,26 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState, useSyncExternalStore } from "react"
 import { ActivityCalendarData } from "@/lib/activity-calendar"
+
+const breakpoints = [
+  { query: "(max-width: 640px)", weeks: 13 },
+  { query: "(max-width: 768px)", weeks: 26 },
+  { query: "(max-width: 1024px)", weeks: 39 },
+] as const
+
+function getWeeks() {
+  for (const bp of breakpoints) {
+    if (window.matchMedia(bp.query).matches) return bp.weeks
+  }
+  return 52
+}
+
+function subscribeToBreakpoints(callback: () => void) {
+  const mqls = breakpoints.map((bp) => window.matchMedia(bp.query))
+  mqls.forEach((mql) => mql.addEventListener("change", callback))
+  return () => mqls.forEach((mql) => mql.removeEventListener("change", callback))
+}
 
 type Props = {
   data: { countsByDay: (number | null)[]; lastDay: number }
@@ -41,20 +60,7 @@ function ActivityCalendar({
 }: Props) {
   const levelColors = getLevelColors(color)
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
-  const [isMobile, setIsMobile] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 640px)").matches
-  )
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 640px)")
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    mq.addEventListener("change", handler)
-    return () => mq.removeEventListener("change", handler)
-  }, [])
-
-  const weeks = isMobile ? 26 : 52
+  const weeks = useSyncExternalStore(subscribeToBreakpoints, getWeeks, () => 52)
 
   const calendar = useMemo(
     () =>
@@ -81,7 +87,7 @@ function ActivityCalendar({
   return (
     <div className="rounded-lg bg-muted p-4 text-sm">
       {/* Top row: total + legend */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-start justify-between">
         <span className="text-muted-foreground">
           {total} {label ? `${label} ${activityType}` : activityType}
         </span>

@@ -35,12 +35,24 @@ function WorkExperience({
 
   return (
     <div className="text-muted-foreground">
-      <div className="flex items-center gap-4">
-        <span className="whitespace-nowrap">
-          <span className="text-primary">{companyEl}</span>, {position}
+      {/* Desktop */}
+      <div className="hidden items-center gap-4 sm:flex">
+        <span className="min-w-0">
+          <span className="text-primary">{companyEl}</span>,{" "}
+          <span className="whitespace-nowrap">{position}</span>
         </span>
         <span className="flex-1 border-b border-current" />
-        <span className="whitespace-nowrap">{yearDisplay}</span>
+        <span className="shrink-0 whitespace-nowrap text-primary">
+          {yearDisplay}
+        </span>
+      </div>
+      {/* Mobile */}
+      <div className="flex flex-col pb-1 sm:hidden">
+        <div className="flex items-center justify-between">
+          <span className="text-primary">{companyEl}</span>
+          <span className="text-primary">{yearDisplay}</span>
+        </div>
+        <span>{position}</span>
       </div>
       <p>{description}</p>
     </div>
