@@ -126,6 +126,7 @@
     }
   html {
     @apply font-sans;
+    scrollbar-gutter: stable;
     }
   ::selection {
     background-color: #4cda82;
