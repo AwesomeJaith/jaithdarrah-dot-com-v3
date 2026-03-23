@@ -23,7 +23,7 @@ const projects = [
   },
   {
     projectName: "Clash of Clans Base Finder",
-    projectOneLiner: "A CLI to automatically find good bases to loot.",
+    projectOneLiner: "A CLI to find bases to loot.",
     projectLink:
       "https://github.com/AwesomeJaith/Clash-of-Clans-Farming-Assistant",
   },
@@ -31,9 +31,9 @@ const projects = [
 
 function ProjectsSection() {
   return (
-    <div className="w-full max-w-3xl">
+    <div className="flex w-full max-w-3xl flex-col gap-2">
       <div>Projects</div>
-      <div className="flex flex-col">
+      <div className="group/list flex flex-col gap-1">
         {projects.map((project) => (
           <Project key={`${project.projectName}`} {...project} />
         ))}
