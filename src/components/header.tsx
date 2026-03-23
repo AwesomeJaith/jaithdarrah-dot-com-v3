@@ -19,9 +19,17 @@ function Header() {
           </svg>
         </Link>
         <div className="flex gap-4">
-          <Link href="/fun">Fun</Link>
-          <Link href="/stats">Stats</Link>
-          <Link href="/Jaith_Darrah_resume.pdf" target="_blank">
+          <Link href="/fun" className="link-underline">
+            Fun
+          </Link>
+          <Link href="/stats" className="link-underline">
+            Stats
+          </Link>
+          <Link
+            href="/Jaith_Darrah_resume.pdf"
+            target="_blank"
+            className="link-underline"
+          >
             Resume
           </Link>
         </div>

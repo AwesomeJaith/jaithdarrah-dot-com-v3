@@ -27,7 +27,7 @@ async function LastUpdated() {
     <a
       href="https://github.com/AwesomeJaith/jaithdarrah-dot-com-v3"
       rel="noopener noreferrer"
-      className="relative w-fit text-sm text-muted-foreground no-underline after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-current after:transition-all after:duration-300 after:ease-out hover:after:w-full"
+      className="link-underline text-sm text-muted-foreground"
     >
       Last updated {formatted}
     </a>

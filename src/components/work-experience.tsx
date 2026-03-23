@@ -25,7 +25,7 @@ function WorkExperience({
       href={companyLink}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative no-underline after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-current after:transition-all after:duration-300 after:ease-out hover:after:w-full"
+      className="link-underline"
     >
       {company}
     </a>
