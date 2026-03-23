@@ -1,0 +1,16 @@
+name: Track Clash Royale battles
+
+on:
+  schedule:
+    - cron: "59 5 * * *" # 11:59 PM CST (UTC-6)
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Clash Royale tracking endpoint
+        run: |
+          curl -s -f -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/clash-royale"

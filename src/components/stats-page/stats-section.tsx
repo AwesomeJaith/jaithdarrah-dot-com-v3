@@ -1,5 +1,3 @@
-"use client"
-
 import { GitHubStats } from "./github-stats"
 import { ChessStats } from "./chess-stats"
 import { ClashRoyaleStats } from "./clash-royale-stats"
