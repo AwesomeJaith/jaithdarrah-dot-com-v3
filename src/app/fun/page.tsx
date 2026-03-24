@@ -58,7 +58,7 @@ export default function FunPage() {
           const Card = (
             <div
               key={item.name}
-              className={`group/card flex flex-col overflow-hidden rounded-[14px] bg-muted no-underline transition-opacity duration-200 ease-linear ${item.comingSoon ? "cursor-default opacity-60" : "hover:opacity-80"}`}
+              className={`group/card flex flex-col overflow-hidden rounded-[14px] bg-muted no-underline transition-opacity duration-200 ease-linear ${item.comingSoon ? "cursor-default" : "hover:opacity-80"}`}
             >
               <div className="relative p-2">
                 <div
@@ -67,7 +67,7 @@ export default function FunPage() {
                   {item.icon}
                 </div>
                 {item.comingSoon && (
-                  <span className="absolute top-4 right-4 rounded-full bg-muted-foreground/15 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  <span className="absolute top-4 right-4 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                     Coming Soon
                   </span>
                 )}

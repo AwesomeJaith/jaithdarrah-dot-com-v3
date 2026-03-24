@@ -27,6 +27,7 @@ const fontGrotesk = Host_Grotesk({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://jaithdarrah.com"),
   title: {
     default: "Jaith Darrah",
     template: "%s | Jaith Darrah",
