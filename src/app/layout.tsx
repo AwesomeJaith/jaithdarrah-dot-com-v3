@@ -38,7 +38,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <div className="flex min-h-screen flex-col items-center gap-8 px-16">
+          <div className="flex min-h-screen flex-col items-center gap-8 px-8 sm:px-16">
             <Header />
             {children}
             <Footer>
