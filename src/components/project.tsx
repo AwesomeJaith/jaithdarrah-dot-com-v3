@@ -1,5 +1,3 @@
-"use client"
-
 interface ProjectProps {
   projectName: string
   projectOneLiner: string

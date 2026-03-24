@@ -27,19 +27,16 @@ function EyeIcon({ saccade = false, blink = false }: EyeIconProps) {
   )
   const isHovering = useRef(false)
 
-  // Mouse tracking
+  // Mouse tracking (rAF-throttled to reduce main thread work)
+  const rafId = useRef<number | null>(null)
+  const latestMouseEvent = useRef<MouseEvent | null>(null)
+
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const processMove = () => {
+      rafId.current = null
+      const e = latestMouseEvent.current
       const rect = svgRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      isMouseActive.current = true
-
-      if (mouseInactivityTimer.current)
-        clearTimeout(mouseInactivityTimer.current)
-      mouseInactivityTimer.current = setTimeout(() => {
-        isMouseActive.current = false
-      }, 2000)
+      if (!e || !rect) return
 
       const centerX = rect.left + rect.width / 2
       const centerY = rect.top + rect.height / 2
@@ -56,9 +53,26 @@ function EyeIcon({ saccade = false, blink = false }: EyeIconProps) {
         setOffset({ x: 0, y: 0 })
       }
     }
-    window.addEventListener("mousemove", handler)
+
+    const handler = (e: MouseEvent) => {
+      latestMouseEvent.current = e
+      isMouseActive.current = true
+
+      if (mouseInactivityTimer.current)
+        clearTimeout(mouseInactivityTimer.current)
+      mouseInactivityTimer.current = setTimeout(() => {
+        isMouseActive.current = false
+      }, 2000)
+
+      if (rafId.current === null) {
+        rafId.current = requestAnimationFrame(processMove)
+      }
+    }
+
+    window.addEventListener("mousemove", handler, { passive: true })
     return () => {
       window.removeEventListener("mousemove", handler)
+      if (rafId.current) cancelAnimationFrame(rafId.current)
       if (mouseInactivityTimer.current)
         clearTimeout(mouseInactivityTimer.current)
     }

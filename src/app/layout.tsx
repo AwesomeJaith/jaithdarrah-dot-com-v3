@@ -8,16 +8,18 @@ import { Footer } from "@/components/footer"
 import { LastUpdated } from "@/components/last-updated"
 import { cn } from "@/lib/utils"
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist" })
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" })
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
 })
 
 const fontGrotesk = Host_Grotesk({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -48,6 +50,10 @@ export default function RootLayout({
         fontGrotesk.variable
       )}
     >
+      <head>
+        <link rel="dns-prefetch" href="https://api.github.com" />
+        <link rel="dns-prefetch" href="https://api.chess.com" />
+      </head>
       <body>
         <ThemeProvider>
           <div className="flex min-h-screen flex-col items-center gap-8 px-8 sm:px-16">

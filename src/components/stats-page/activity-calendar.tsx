@@ -135,7 +135,7 @@ function ActivityCalendar({
           ))}
         </div>
 
-        {/* Activity grid */}
+        {/* Activity grid (event delegation for tooltips) */}
         <div
           style={{
             gridArea: "chart",
@@ -146,10 +146,20 @@ function ActivityCalendar({
             gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
             gap: "0.2em",
           }}
+          onMouseOver={(e) => {
+            const label = (e.target as HTMLElement).dataset.label
+            if (label) setTooltip({ x: e.clientX, y: e.clientY, text: label })
+          }}
+          onMouseMove={(e) => {
+            const label = (e.target as HTMLElement).dataset.label
+            if (label) setTooltip({ x: e.clientX, y: e.clientY, text: label })
+          }}
+          onMouseLeave={() => setTooltip(null)}
         >
           {days.map((day, i) => (
             <div
               key={i}
+              data-label={day.label || undefined}
               style={{
                 width: "100%",
                 aspectRatio: "1",
@@ -162,17 +172,6 @@ function ActivityCalendar({
                     ? "2px solid var(--foreground)"
                     : undefined,
               }}
-              onMouseEnter={(e) => {
-                if (day.label) {
-                  setTooltip({ x: e.clientX, y: e.clientY, text: day.label })
-                }
-              }}
-              onMouseMove={(e) => {
-                if (day.label) {
-                  setTooltip({ x: e.clientX, y: e.clientY, text: day.label })
-                }
-              }}
-              onMouseLeave={() => setTooltip(null)}
             />
           ))}
         </div>
