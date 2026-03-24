@@ -1,41 +1,36 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 const MAX_OFFSET = 18
 
 function EyeIcon() {
-  const [mouse, setMouse] = useState({ x: 0, y: 0 })
-  const [rect, setRect] = useState<DOMRect | null>(null)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const svgRef = useRef<SVGSVGElement | null>(null)
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => setMouse({ x: e.clientX, y: e.clientY })
+    const handler = (e: MouseEvent) => {
+      const rect = svgRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+
+      const dx = e.clientX - centerX
+      const dy = e.clientY - centerY
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (distance > 0) {
+        const clampedDistance = Math.min(distance, MAX_OFFSET * 10)
+        const scale = (clampedDistance / (MAX_OFFSET * 10)) * MAX_OFFSET
+        setOffset({ x: (dx / distance) * scale, y: (dy / distance) * scale })
+      } else {
+        setOffset({ x: 0, y: 0 })
+      }
+    }
     window.addEventListener("mousemove", handler)
     return () => window.removeEventListener("mousemove", handler)
   }, [])
-
-  const svgRef = useCallback((node: SVGSVGElement | null) => {
-    if (node) setRect(node.getBoundingClientRect())
-  }, [])
-
-  let offsetX = 0
-  let offsetY = 0
-
-  if (rect) {
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-
-    const dx = mouse.x - centerX
-    const dy = mouse.y - centerY
-    const distance = Math.sqrt(dx * dx + dy * dy)
-
-    if (distance > 0) {
-      const clampedDistance = Math.min(distance, MAX_OFFSET * 10)
-      const scale = (clampedDistance / (MAX_OFFSET * 10)) * MAX_OFFSET
-      offsetX = (dx / distance) * scale
-      offsetY = (dy / distance) * scale
-    }
-  }
 
   return (
     <svg
@@ -50,8 +45,8 @@ function EyeIcon() {
         fill="currentColor"
       />
       <circle
-        cx={80 + offsetX}
-        cy={80 + offsetY}
+        cx={80 + offset.x}
+        cy={80 + offset.y}
         r="23.09"
         className="fill-background"
       />
