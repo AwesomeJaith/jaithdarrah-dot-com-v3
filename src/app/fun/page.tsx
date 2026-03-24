@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import {
   FaNoteSticky,
@@ -5,6 +6,12 @@ import {
   FaChessKnight,
   FaCamera,
 } from "react-icons/fa6"
+
+export const metadata: Metadata = {
+  title: "Fun",
+  description:
+    "Fun interactive experiences — sticker wall, typing race, chess puzzles, and photo gallery.",
+}
 
 const funItems = [
   {

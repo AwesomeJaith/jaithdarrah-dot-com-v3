@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { Geist, Geist_Mono, Host_Grotesk } from "next/font/google"
 
 import "./globals.css"
@@ -18,6 +19,17 @@ const fontGrotesk = Host_Grotesk({
   subsets: ["latin"],
   variable: "--font-sans",
 })
+
+export const metadata: Metadata = {
+  title: {
+    default: "Jaith Darrah",
+    template: "%s | Jaith Darrah",
+  },
+  description: "Jaith Darrah",
+  openGraph: {
+    images: ["/open-graph-cat.png"],
+  },
+}
 
 export default function RootLayout({
   children,
@@ -40,7 +52,9 @@ export default function RootLayout({
         <ThemeProvider>
           <div className="flex min-h-screen flex-col items-center gap-8 px-8 sm:px-16">
             <Header />
-            {children}
+            <main className="flex w-full flex-1 flex-col items-center">
+              {children}
+            </main>
             <Footer>
               <LastUpdated />
             </Footer>
