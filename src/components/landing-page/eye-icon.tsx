@@ -6,23 +6,26 @@ import { useIsMobile } from "@/hooks/use-is-mobile"
 const MAX_OFFSET = 18
 
 interface EyeIconProps {
-  gyroscope?: boolean
   saccade?: boolean
   blink?: boolean
 }
 
-function EyeIcon({ gyroscope = false, saccade = false, blink = false }: EyeIconProps) {
+function EyeIcon({ saccade = false, blink = false }: EyeIconProps) {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [closed, setClosed] = useState(false)
   const isMobile = useIsMobile()
   const svgRef = useRef<SVGSVGElement | null>(null)
   const saccadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const saccadeAnimation = useRef<ReturnType<typeof requestAnimationFrame> | null>(null)
+  const saccadeAnimation = useRef<ReturnType<
+    typeof requestAnimationFrame
+  > | null>(null)
   const targetOffset = useRef({ x: 0, y: 0 })
   const currentOffset = useRef({ x: 0, y: 0 })
   const isMouseActive = useRef(false)
-  const isGyroActive = useRef(false)
-  const mouseInactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mouseInactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
+  const isHovering = useRef(false)
 
   // Mouse tracking
   useEffect(() => {
@@ -32,7 +35,8 @@ function EyeIcon({ gyroscope = false, saccade = false, blink = false }: EyeIconP
 
       isMouseActive.current = true
 
-      if (mouseInactivityTimer.current) clearTimeout(mouseInactivityTimer.current)
+      if (mouseInactivityTimer.current)
+        clearTimeout(mouseInactivityTimer.current)
       mouseInactivityTimer.current = setTimeout(() => {
         isMouseActive.current = false
       }, 2000)
@@ -55,58 +59,24 @@ function EyeIcon({ gyroscope = false, saccade = false, blink = false }: EyeIconP
     window.addEventListener("mousemove", handler)
     return () => {
       window.removeEventListener("mousemove", handler)
-      if (mouseInactivityTimer.current) clearTimeout(mouseInactivityTimer.current)
+      if (mouseInactivityTimer.current)
+        clearTimeout(mouseInactivityTimer.current)
     }
   }, [])
 
-  // Gyroscope tracking
-  useEffect(() => {
-    if (!gyroscope) return
-
-    const handler = (e: DeviceOrientationEvent) => {
-      const gamma = e.gamma ?? 0 // left/right tilt (-90 to 90)
-      const beta = e.beta ?? 0 // front/back tilt (-180 to 180)
-
-      if (Math.abs(gamma) > 1 || Math.abs(beta) > 1) {
-        isGyroActive.current = true
-      }
-
-      const x = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, (gamma / 45) * MAX_OFFSET))
-      const y = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, ((beta - 45) / 45) * MAX_OFFSET))
-
-      if (!isMouseActive.current) {
-        setOffset({ x, y })
-      }
-    }
-
-    // iOS 13+ requires permission
-    const doe = DeviceOrientationEvent as unknown as {
-      requestPermission?: () => Promise<string>
-    }
-    if (typeof doe.requestPermission === "function") {
-      doe.requestPermission().then((state) => {
-        if (state === "granted") {
-          window.addEventListener("deviceorientation", handler)
-        }
-      })
-    } else {
-      window.addEventListener("deviceorientation", handler)
-    }
-
-    return () => {
-      window.removeEventListener("deviceorientation", handler)
-    }
-  }, [gyroscope])
-
   // Saccade (idle random eye movement)
   useEffect(() => {
-    if (!saccade) return
+    if (!saccade || !isMobile) return
 
     const animateToTarget = () => {
       const lerp = 0.12
       currentOffset.current = {
-        x: currentOffset.current.x + (targetOffset.current.x - currentOffset.current.x) * lerp,
-        y: currentOffset.current.y + (targetOffset.current.y - currentOffset.current.y) * lerp,
+        x:
+          currentOffset.current.x +
+          (targetOffset.current.x - currentOffset.current.x) * lerp,
+        y:
+          currentOffset.current.y +
+          (targetOffset.current.y - currentOffset.current.y) * lerp,
       }
 
       setOffset({ ...currentOffset.current })
@@ -129,9 +99,9 @@ function EyeIcon({ gyroscope = false, saccade = false, blink = false }: EyeIconP
     }
 
     const scheduleSaccade = () => {
-      const delay = 800 + Math.random() * 2000
+      const delay = 800 + Math.random() * 1000
       saccadeTimer.current = setTimeout(() => {
-        if (!isMouseActive.current && !isGyroActive.current) {
+        if (!isMouseActive.current) {
           pickNewTarget()
         }
         scheduleSaccade()
@@ -142,11 +112,32 @@ function EyeIcon({ gyroscope = false, saccade = false, blink = false }: EyeIconP
 
     return () => {
       if (saccadeTimer.current) clearTimeout(saccadeTimer.current)
-      if (saccadeAnimation.current) cancelAnimationFrame(saccadeAnimation.current)
+      if (saccadeAnimation.current)
+        cancelAnimationFrame(saccadeAnimation.current)
     }
-  }, [saccade])
+  }, [saccade, isMobile])
 
-  // Blink: touch to blink on mobile, hover to close on desktop
+  // Periodic blink (both desktop and mobile)
+  useEffect(() => {
+    if (!blink) return
+
+    const scheduleBlink = () => {
+      const delay = 2000 + Math.random() * 4000
+      const timer = setTimeout(() => {
+        if (!isHovering.current) {
+          setClosed(true)
+          setTimeout(() => setClosed(false), 150)
+        }
+        scheduleBlink()
+      }, delay)
+      return timer
+    }
+
+    const timer = scheduleBlink()
+    return () => clearTimeout(timer)
+  }, [blink])
+
+  // Hover to close on desktop, touch to blink on mobile
   const blinkTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleTouchStart = useCallback(() => {
@@ -158,11 +149,13 @@ function EyeIcon({ gyroscope = false, saccade = false, blink = false }: EyeIconP
 
   const handleMouseEnter = useCallback(() => {
     if (!blink || isMobile) return
+    isHovering.current = true
     setClosed(true)
   }, [blink, isMobile])
 
   const handleMouseLeave = useCallback(() => {
     if (!blink || isMobile) return
+    isHovering.current = false
     setClosed(false)
   }, [blink, isMobile])
 
