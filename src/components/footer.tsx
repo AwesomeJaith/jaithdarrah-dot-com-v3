@@ -29,7 +29,7 @@ const socials = [
 // TODO: Improve feel of social icons. Don't quite fit with the vibe.
 function Footer({ children }: { children?: React.ReactNode }) {
   return (
-    <footer className="mt-auto flex w-full max-w-3xl flex-col gap-4 py-16">
+    <footer className="mt-auto flex w-full max-w-3xl flex-col gap-4 py-8">
       <div>
         I&apos;m friendly and don&apos;t bite. Feel free to say hello!{" "}
         <span className="inline-flex align-middle">
