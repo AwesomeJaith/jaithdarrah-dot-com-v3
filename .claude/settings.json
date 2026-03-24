@@ -1,3 +1,6 @@
 {
-    "env": { "ENABLE_LSP_TOOL": "1" }
+  "env": { "ENABLE_LSP_TOOL": "1" },
+  "permissions": {
+    "allow": ["Bash(pnpm typecheck:*)", "Bash(pnpm lint:*)"]
+  }
 }

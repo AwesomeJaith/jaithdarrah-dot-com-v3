@@ -8,7 +8,11 @@ import { Footer } from "@/components/footer"
 import { LastUpdated } from "@/components/last-updated"
 import { cn } from "@/lib/utils"
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" })
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+})
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -58,7 +62,7 @@ export default function RootLayout({
         <ThemeProvider>
           <div className="flex min-h-screen flex-col items-center gap-8 px-8 sm:px-16">
             <Header />
-            <main className="flex w-full flex-1 flex-col items-center">
+            <main className="flex w-full flex-1 flex-col items-center gap-8">
               {children}
             </main>
             <Footer>

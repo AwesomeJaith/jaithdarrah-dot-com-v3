@@ -1,3 +1,5 @@
+"use client"
+
 function GraduationBlurb() {
   const graduationDate = new Date("May 11 2026")
   const now = new Date()

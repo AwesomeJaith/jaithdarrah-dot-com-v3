@@ -10,7 +10,7 @@ function Project({ projectName, projectOneLiner, projectLink }: ProjectProps) {
       href={projectLink}
       target="_blank"
       rel="noopener noreferrer"
-      className="group/item flex w-full cursor-pointer items-center justify-between rounded-sm bg-muted p-2 no-underline transition-opacity duration-200 ease-linear group-hover/list:opacity-50 hover:opacity-100!"
+      className="group/item flex w-full cursor-pointer items-center justify-between rounded-sm bg-muted p-2 no-underline transition-all duration-200 ease-linear group-hover/list:opacity-50 hover:opacity-100! active:scale-[0.98] active:bg-muted-foreground/10"
     >
       <div className="flex min-w-0 shrink items-center gap-1.5">
         <div className="max-w-0 overflow-hidden opacity-0 blur-[2px] transition-all duration-200 ease-out group-hover/item:max-w-5 group-hover/item:opacity-100 group-hover/item:blur-none">
