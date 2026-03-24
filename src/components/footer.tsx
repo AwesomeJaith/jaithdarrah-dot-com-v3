@@ -1,9 +1,9 @@
 "use client"
 
 import { SocialIcon } from "./social-icon"
+import { EmailButton } from "./email-button"
 import { FaGithub, FaXTwitter } from "react-icons/fa6"
 import { FaLinkedin } from "react-icons/fa"
-import { Mail } from "lucide-react"
 
 const socials = [
   {
@@ -17,12 +17,6 @@ const socials = [
     socialLink: "https://linkedin.com/in/jaithdarrah",
     label: "LinkedIn profile",
     className: "rotate-3",
-  },
-  {
-    socialIcon: <Mail size={16} />,
-    socialLink: "mailto:hi@jaithdarrah.com",
-    label: "Email",
-    className: "-rotate-3",
   },
   {
     socialIcon: <FaGithub />,
@@ -39,7 +33,11 @@ function Footer({ children }: { children?: React.ReactNode }) {
       <div>
         I&apos;m friendly and don&apos;t bite. Feel free to say hello!{" "}
         <span className="inline-flex align-middle">
-          {socials.map((social) => (
+          {socials.slice(0, 2).map((social) => (
+            <SocialIcon key={social.label} {...social} />
+          ))}
+          <EmailButton className="-rotate-3" />
+          {socials.slice(2).map((social) => (
             <SocialIcon key={social.label} {...social} />
           ))}
         </span>
