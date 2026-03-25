@@ -1,0 +1,412 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import dynamic from "next/dynamic"
+import type { Sticker as StickerType } from "@/lib/stickers"
+import { Sticker } from "./sticker"
+import { StickerToolbar } from "./sticker-toolbar"
+
+const StickerCreator = dynamic(() =>
+  import("./sticker-creator").then((mod) => ({ default: mod.StickerCreator })),
+  { ssr: false }
+)
+
+type StickerCanvasProps = {
+  initialStickers: StickerType[]
+}
+
+const MIN_SCALE = 0.1
+const MAX_SCALE = 3
+const ZOOM_STEP = 0.15
+
+export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [stickerMap, setStickerMap] = useState<Map<string, StickerType>>(
+    () => new Map(initialStickers.map((s) => [s.id, s]))
+  )
+  const stickers = useMemo(() => Array.from(stickerMap.values()), [stickerMap])
+  const [translate, setTranslate] = useState({ x: 0, y: 0 })
+  const [scale, setScale] = useState(1)
+
+  // Pan state
+  const isPanningRef = useRef(false)
+  const panStartRef = useRef({ x: 0, y: 0 })
+  const translateStartRef = useRef({ x: 0, y: 0 })
+
+  // Placement mode state
+  const [isPlacing, setIsPlacing] = useState(false)
+  const [placementPos, setPlacementPos] = useState<{
+    x: number
+    y: number
+  } | null>(null)
+  const [placementRotation, setPlacementRotation] = useState(0)
+  const [showCreator, setShowCreator] = useState(false)
+  const [stickerBlob, setStickerBlob] = useState<Blob | null>(null)
+  const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
+    null
+  )
+
+  // Pinch state
+  const pinchRef = useRef<{ dist: number; scale: number } | null>(null)
+  const pointersRef = useRef<Map<number, PointerEvent>>(new Map())
+
+  // Convert screen coordinates to world coordinates
+  const screenToWorld = useCallback(
+    (screenX: number, screenY: number) => {
+      const container = containerRef.current
+      if (!container) return { x: 0, y: 0 }
+      const rect = container.getBoundingClientRect()
+      return {
+        x: (screenX - rect.left - translate.x) / scale,
+        y: (screenY - rect.top - translate.y) / scale,
+      }
+    },
+    [translate, scale]
+  )
+
+  // Pan handlers
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      // Only pan with left mouse button or single touch
+      if (e.button !== 0) return
+
+      pointersRef.current.set(e.pointerId, e.nativeEvent)
+
+      // If two pointers, start pinch
+      if (pointersRef.current.size === 2) {
+        const pointers = Array.from(pointersRef.current.values())
+        const dist = Math.hypot(
+          pointers[0].clientX - pointers[1].clientX,
+          pointers[0].clientY - pointers[1].clientY
+        )
+        pinchRef.current = { dist, scale }
+        isPanningRef.current = false
+        return
+      }
+
+      if (isPlacing && stickerPreviewUrl) {
+        // In placement mode, click to confirm placement
+        return
+      }
+
+      isPanningRef.current = true
+      panStartRef.current = { x: e.clientX, y: e.clientY }
+      translateStartRef.current = { ...translate }
+      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    },
+    [translate, scale, isPlacing, stickerPreviewUrl]
+  )
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      pointersRef.current.set(e.pointerId, e.nativeEvent)
+
+      // Handle pinch zoom
+      if (pointersRef.current.size === 2 && pinchRef.current) {
+        const pointers = Array.from(pointersRef.current.values())
+        const dist = Math.hypot(
+          pointers[0].clientX - pointers[1].clientX,
+          pointers[0].clientY - pointers[1].clientY
+        )
+        const newScale = Math.min(
+          MAX_SCALE,
+          Math.max(MIN_SCALE, pinchRef.current.scale * (dist / pinchRef.current.dist))
+        )
+        setScale(newScale)
+        return
+      }
+
+      // Update placement cursor position
+      if (isPlacing && stickerPreviewUrl) {
+        const world = screenToWorld(e.clientX, e.clientY)
+        setPlacementPos({ x: world.x - 50, y: world.y - 50 })
+      }
+
+      // Handle pan
+      if (!isPanningRef.current) return
+      const dx = e.clientX - panStartRef.current.x
+      const dy = e.clientY - panStartRef.current.y
+      setTranslate({
+        x: translateStartRef.current.x + dx,
+        y: translateStartRef.current.y + dy,
+      })
+    },
+    [isPlacing, stickerPreviewUrl, screenToWorld]
+  )
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      pointersRef.current.delete(e.pointerId)
+      if (pointersRef.current.size < 2) {
+        pinchRef.current = null
+      }
+
+      // If in placement mode and we didn't pan, confirm placement
+      if (isPlacing && stickerPreviewUrl && !isPanningRef.current) {
+        const world = screenToWorld(e.clientX, e.clientY)
+        setPlacementPos({ x: world.x - 50, y: world.y - 50 })
+        setShowCreator(true)
+      }
+
+      isPanningRef.current = false
+    },
+    [isPlacing, stickerPreviewUrl, screenToWorld]
+  )
+
+  // Wheel handler: zoom when not placing, rotate when placing
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      if (isPlacing && stickerPreviewUrl) {
+        // Rotate the sticker during placement
+        const delta = e.deltaY > 0 ? 5 : -5
+        setPlacementRotation((prev) => prev + delta)
+        return
+      }
+
+      // Zoom toward cursor
+      const container = containerRef.current
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left
+      const mouseY = e.clientY - rect.top
+
+      const zoomFactor = e.deltaY > 0 ? 1 - ZOOM_STEP : 1 + ZOOM_STEP
+      const newScale = Math.min(
+        MAX_SCALE,
+        Math.max(MIN_SCALE, scale * zoomFactor)
+      )
+
+      // Adjust translate so zoom centers on cursor
+      const scaleChange = newScale / scale
+      setTranslate((prev) => ({
+        x: mouseX - (mouseX - prev.x) * scaleChange,
+        y: mouseY - (mouseY - prev.y) * scaleChange,
+      }))
+      setScale(newScale)
+    },
+    [scale, isPlacing, stickerPreviewUrl]
+  )
+
+  // Attach wheel handler as non-passive so preventDefault works
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      handleWheel(e)
+    }
+    container.addEventListener("wheel", onWheel, { passive: false })
+    return () => container.removeEventListener("wheel", onWheel)
+  }, [handleWheel])
+
+  // Center the origin on mount
+  useEffect(() => {
+    const container = containerRef.current
+    if (container) {
+      const rect = container.getBoundingClientRect()
+      setTranslate({ x: rect.width / 2, y: rect.height / 2 })
+    }
+  }, [])
+
+  // Compute viewport bounds in world coordinates
+  const getViewportBounds = useCallback(() => {
+    const container = containerRef.current
+    if (!container) return null
+    const rect = container.getBoundingClientRect()
+    const margin = 200 // Buffer to pre-load nearby stickers
+    const minX = (0 - translate.x) / scale - margin
+    const minY = (0 - translate.y) / scale - margin
+    const maxX = (rect.width - translate.x) / scale + margin
+    const maxY = (rect.height - translate.y) / scale + margin
+    return { minX, minY, maxX, maxY }
+  }, [translate, scale])
+
+  // Fetch stickers for the current viewport (debounced)
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const bounds = getViewportBounds()
+      if (!bounds) return
+      try {
+        const params = new URLSearchParams({
+          minX: String(Math.round(bounds.minX)),
+          minY: String(Math.round(bounds.minY)),
+          maxX: String(Math.round(bounds.maxX)),
+          maxY: String(Math.round(bounds.maxY)),
+        })
+        const res = await fetch(`/api/stickers?${params}`)
+        if (res.ok) {
+          const data: StickerType[] = await res.json()
+          setStickerMap((prev) => {
+            const next = new Map(prev)
+            for (const s of data) {
+              next.set(s.id, s)
+            }
+            return next
+          })
+        }
+      } catch {
+        // Silently fail
+      }
+    }, 300) // 300ms debounce
+    return () => clearTimeout(timer)
+  }, [getViewportBounds])
+
+  const handlePlaceStickerClick = useCallback(() => {
+    if (isPlacing) {
+      // Cancel placement
+      setIsPlacing(false)
+      setPlacementPos(null)
+      setPlacementRotation(0)
+      setStickerBlob(null)
+      if (stickerPreviewUrl) {
+        URL.revokeObjectURL(stickerPreviewUrl)
+        setStickerPreviewUrl(null)
+      }
+    } else {
+      // Open creator to upload and process image first
+      setShowCreator(true)
+    }
+  }, [isPlacing, stickerPreviewUrl])
+
+  const handleStickerProcessed = useCallback((blob: Blob) => {
+    const url = URL.createObjectURL(blob)
+    setStickerBlob(blob)
+    setStickerPreviewUrl(url)
+    setShowCreator(false)
+    setIsPlacing(true)
+    setPlacementRotation(0)
+  }, [])
+
+  const handleStickerSubmitted = useCallback(
+    (newSticker: StickerType) => {
+      // Don't add to canvas yet — it's pending approval
+      // Just clean up placement state
+      setShowCreator(false)
+      setIsPlacing(false)
+      setPlacementPos(null)
+      setPlacementRotation(0)
+      setStickerBlob(null)
+      if (stickerPreviewUrl) {
+        URL.revokeObjectURL(stickerPreviewUrl)
+        setStickerPreviewUrl(null)
+      }
+      void newSticker // Sticker is pending, will appear after approval
+    },
+    [stickerPreviewUrl]
+  )
+
+  const handleCreatorClose = useCallback(() => {
+    setShowCreator(false)
+    if (!stickerBlob) {
+      setIsPlacing(false)
+    }
+  }, [stickerBlob])
+
+  return (
+    <div className="relative h-full w-full overflow-hidden rounded-xl border border-border bg-muted/30">
+      {/* Canvas */}
+      <div
+        ref={containerRef}
+        className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
+        style={
+          isPlacing && stickerPreviewUrl
+            ? { cursor: "crosshair" }
+            : undefined
+        }
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <div
+          className="origin-top-left will-change-transform"
+          style={{
+            transform: `translate3d(${translate.x}px, ${translate.y}px, 0) scale(${scale})`,
+          }}
+        >
+          {/* Origin crosshair */}
+          <div className="absolute -left-px -top-4 h-8 w-0.5 bg-border" />
+          <div className="absolute -top-px -left-4 h-0.5 w-8 bg-border" />
+
+          {/* Placed stickers */}
+          {stickers.map((sticker) => (
+            <Sticker key={sticker.id} sticker={sticker} />
+          ))}
+
+          {/* Placement preview */}
+          {isPlacing && stickerPreviewUrl && placementPos && (
+            <div
+              className="pointer-events-none absolute opacity-70"
+              style={{
+                left: placementPos.x,
+                top: placementPos.y,
+                width: 100,
+                height: 100,
+                transform: `rotate(${placementRotation}deg)`,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={stickerPreviewUrl}
+                alt="Sticker preview"
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <StickerToolbar
+        onZoomIn={() =>
+          setScale((s) => Math.min(MAX_SCALE, s * (1 + ZOOM_STEP)))
+        }
+        onZoomOut={() =>
+          setScale((s) => Math.max(MIN_SCALE, s * (1 - ZOOM_STEP)))
+        }
+        onResetView={() => {
+          const container = containerRef.current
+          if (container) {
+            const rect = container.getBoundingClientRect()
+            setTranslate({ x: rect.width / 2, y: rect.height / 2 })
+          } else {
+            setTranslate({ x: 0, y: 0 })
+          }
+          setScale(1)
+        }}
+        onPlaceSticker={handlePlaceStickerClick}
+        isPlacing={isPlacing}
+      />
+
+      {/* Placement hint */}
+      {isPlacing && stickerPreviewUrl && (
+        <div className="absolute left-1/2 top-4 z-40 -translate-x-1/2 rounded-lg border border-border bg-popover px-4 py-2 text-sm text-popover-foreground shadow-md">
+          Click to place your sticker. Scroll to rotate.
+        </div>
+      )}
+
+      {/* Empty state */}
+      {stickers.length === 0 && !isPlacing && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <p className="text-lg font-medium">No stickers yet!</p>
+            <p className="mt-1 text-sm">Be the first to place one.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Creator modal */}
+      {showCreator && (
+        <StickerCreator
+          onClose={handleCreatorClose}
+          onStickerProcessed={handleStickerProcessed}
+          onStickerSubmitted={handleStickerSubmitted}
+          stickerBlob={stickerBlob}
+          placementPos={placementPos}
+          placementRotation={placementRotation}
+        />
+      )}
+    </div>
+  )
+}

@@ -20,7 +20,6 @@ const funItems = [
     href: "/fun/sticker-wall",
     icon: <FaNoteSticky className="text-4xl text-yellow-500" />,
     bgClass: "bg-yellow-500/10",
-    comingSoon: true,
   },
   {
     name: "Typing Race",
