@@ -32,7 +32,8 @@ export const metadata: Metadata = {
     default: "Jaith Darrah",
     template: "%s | Jaith Darrah",
   },
-  description: "Jaith Darrah",
+  description:
+    "Software engineer obsessed with the details, building software that's fast, reliable, and beautiful.",
   openGraph: {
     images: ["/open-graph-cat.png"],
   },
@@ -56,6 +57,7 @@ export default function RootLayout({
       )}
     >
       <head>
+        <meta name="apple-mobile-web-app-title" content="Jaith Darrah" />
         <link rel="dns-prefetch" href="https://api.github.com" />
         <link rel="dns-prefetch" href="https://api.chess.com" />
       </head>
