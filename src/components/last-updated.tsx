@@ -26,6 +26,7 @@ async function LastUpdated() {
   return (
     <a
       href="https://github.com/AwesomeJaith/jaithdarrah-dot-com-v3"
+      target="_blank"
       rel="noopener noreferrer"
       className="link-underline text-sm text-muted-foreground"
     >
