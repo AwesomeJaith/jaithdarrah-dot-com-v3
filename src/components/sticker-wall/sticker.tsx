@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useState } from "react"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { StickerPopup } from "./sticker-popup"
@@ -27,11 +28,12 @@ export function Sticker({ sticker }: { sticker: StickerType }) {
       aria-label={`Sticker by ${sticker.username}${sticker.message ? `: ${sticker.message}` : ""}`}
     >
       {hovered && <StickerPopup sticker={sticker} />}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src={sticker.image_url}
         alt={`Sticker by ${sticker.username}`}
-        className="pointer-events-none h-full w-full select-none object-contain"
+        width={sticker.width}
+        height={sticker.height}
+        className="pointer-events-none h-full w-full object-contain select-none"
         draggable={false}
       />
     </div>
