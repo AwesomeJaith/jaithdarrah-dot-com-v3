@@ -9,6 +9,13 @@ import { FaXmark, FaUpload } from "react-icons/fa6"
 
 const preset = presetJson as unknown as PipelineDefinition
 
+// new Function body is opaque to Turbopack — prevents it from fetching CDN
+// URLs or walking pipemagic/@jsquash/avif module graphs during the build.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _cdn = new Function("u", "return import(u)") as (
+  u: string
+) => Promise<unknown>
+
 type StickerCreatorProps = {
   onClose: () => void
   onStickerProcessed: (blob: Blob) => void
@@ -20,7 +27,9 @@ type StickerCreatorProps = {
 }
 
 async function convertToAvif(blob: Blob): Promise<Blob> {
-  const { encode } = await import("@jsquash/avif")
+  const { encode } = (await _cdn(
+    "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/+esm"
+  )) as typeof import("@jsquash/avif")
   const bitmap = await createImageBitmap(blob)
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
   const ctx = canvas.getContext("2d")!
@@ -92,9 +101,8 @@ export function StickerCreator({
           return
         }
 
-        // Load from CDN so the bundler never sees @huggingface/transformers
-        const { PipeMagic } = (await import(
-          /* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/pipemagic@0.1.4/+esm"
+        const { PipeMagic } = (await _cdn(
+          "https://cdn.jsdelivr.net/npm/pipemagic@0.1.4/+esm"
         )) as typeof import("pipemagic")
         const pm = new PipeMagic()
         const { blob } = await pm.run(preset, file, {

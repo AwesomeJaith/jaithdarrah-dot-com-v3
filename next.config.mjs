@@ -9,6 +9,9 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    optimizePackageImports: ["react-icons", "lucide-react", "date-fns"],
+  },
 }
 
 export default nextConfig
