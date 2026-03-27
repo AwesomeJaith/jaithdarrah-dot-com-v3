@@ -1,0 +1,209 @@
+"use client"
+
+import { useCallback, useMemo, useRef, useState } from "react"
+import type { Sticker } from "@/lib/stickers"
+
+type StickerMinimapProps = {
+  stickers: Sticker[]
+  translate: { x: number; y: number }
+  scale: number
+  containerSize: { width: number; height: number } | null
+  onNavigate: (worldX: number, worldY: number) => void
+}
+
+const MINIMAP_SIZE = 120
+const PADDING = 8
+
+export function StickerMinimap({
+  stickers,
+  translate,
+  scale,
+  containerSize,
+  onNavigate,
+}: StickerMinimapProps) {
+  // Calculate world bounds symmetric around origin so the + is always centered
+  const worldBounds = useMemo(() => {
+    let extent = 0
+    for (const s of stickers) {
+      extent = Math.max(
+        extent,
+        Math.abs(s.x),
+        Math.abs(s.y),
+        Math.abs(s.x + s.width),
+        Math.abs(s.y + s.height)
+      )
+    }
+    const pad = 200
+    const half = extent + pad
+    return { minX: -half, minY: -half, maxX: half, maxY: half }
+  }, [stickers])
+
+  const worldWidth = worldBounds.maxX - worldBounds.minX
+  const worldHeight = worldBounds.maxY - worldBounds.minY
+
+  // Fit world into minimap maintaining aspect ratio
+  const mapScale = useMemo(() => {
+    if (worldWidth === 0 || worldHeight === 0) return 1
+    const inner = MINIMAP_SIZE - PADDING * 2
+    return Math.min(inner / worldWidth, inner / worldHeight)
+  }, [worldWidth, worldHeight])
+
+  const mapW = worldWidth * mapScale
+  const mapH = worldHeight * mapScale
+  const offsetX = (MINIMAP_SIZE - mapW) / 2
+  const offsetY = (MINIMAP_SIZE - mapH) / 2
+
+  // Viewport rectangle in minimap coordinates
+  const viewport = useMemo(() => {
+    if (!containerSize) return null
+    const vMinX = (0 - translate.x) / scale
+    const vMinY = (0 - translate.y) / scale
+    const vMaxX = (containerSize.width - translate.x) / scale
+    const vMaxY = (containerSize.height - translate.y) / scale
+    return {
+      x: (vMinX - worldBounds.minX) * mapScale + offsetX,
+      y: (vMinY - worldBounds.minY) * mapScale + offsetY,
+      width: (vMaxX - vMinX) * mapScale,
+      height: (vMaxY - vMinY) * mapScale,
+    }
+  }, [containerSize, translate, scale, worldBounds, mapScale, offsetX, offsetY])
+
+  // Drag state for viewport rectangle
+  const dragRef = useRef<{ offsetX: number; offsetY: number } | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const minimapToWorld = useCallback(
+    (mx: number, my: number) => ({
+      x: (mx - offsetX) / mapScale + worldBounds.minX,
+      y: (my - offsetY) / mapScale + worldBounds.minY,
+    }),
+    [offsetX, offsetY, mapScale, worldBounds]
+  )
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const mx = e.clientX - rect.left
+      const my = e.clientY - rect.top
+
+      // Check if pointer is inside the viewport rect
+      if (
+        viewport &&
+        mx >= viewport.x &&
+        mx <= viewport.x + viewport.width &&
+        my >= viewport.y &&
+        my <= viewport.y + viewport.height
+      ) {
+        // Start dragging — record offset from viewport center
+        const vpCenterX = viewport.x + viewport.width / 2
+        const vpCenterY = viewport.y + viewport.height / 2
+        dragRef.current = { offsetX: mx - vpCenterX, offsetY: my - vpCenterY }
+        setIsDragging(true)
+        e.currentTarget.setPointerCapture(e.pointerId)
+        e.stopPropagation()
+      } else {
+        // Click outside viewport → jump navigate
+        const world = minimapToWorld(mx, my)
+        onNavigate(world.x, world.y)
+      }
+    },
+    [viewport, minimapToWorld, onNavigate]
+  )
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!dragRef.current) return
+      const rect = e.currentTarget.getBoundingClientRect()
+      const mx = e.clientX - rect.left - dragRef.current.offsetX
+      const my = e.clientY - rect.top - dragRef.current.offsetY
+      const world = minimapToWorld(mx, my)
+      onNavigate(world.x, world.y)
+    },
+    [minimapToWorld, onNavigate]
+  )
+
+  const handlePointerUp = useCallback(() => {
+    dragRef.current = null
+    setIsDragging(false)
+  }, [])
+
+  if (stickers.length === 0) return null
+
+  return (
+    <div
+      className="rounded-lg border border-border bg-popover shadow-md"
+      style={{
+        width: MINIMAP_SIZE,
+        height: MINIMAP_SIZE,
+        cursor: isDragging ? "grabbing" : "pointer",
+        touchAction: "none",
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      aria-label="Mini map"
+    >
+      <svg
+        width={MINIMAP_SIZE}
+        height={MINIMAP_SIZE}
+        className="overflow-hidden rounded-lg"
+      >
+        {/* Origin crosshair */}
+        <line
+          x1={(0 - worldBounds.minX) * mapScale + offsetX}
+          y1={(0 - worldBounds.minY) * mapScale + offsetY - 3}
+          x2={(0 - worldBounds.minX) * mapScale + offsetX}
+          y2={(0 - worldBounds.minY) * mapScale + offsetY + 3}
+          className="stroke-muted-foreground/30"
+          strokeWidth={1}
+        />
+        <line
+          x1={(0 - worldBounds.minX) * mapScale + offsetX - 3}
+          y1={(0 - worldBounds.minY) * mapScale + offsetY}
+          x2={(0 - worldBounds.minX) * mapScale + offsetX + 3}
+          y2={(0 - worldBounds.minY) * mapScale + offsetY}
+          className="stroke-muted-foreground/30"
+          strokeWidth={1}
+        />
+
+        {/* Sticker thumbnails */}
+        {stickers.map((sticker) => {
+          const sx = (sticker.x - worldBounds.minX) * mapScale + offsetX
+          const sy = (sticker.y - worldBounds.minY) * mapScale + offsetY
+          const sw = Math.max(sticker.width * mapScale, 2)
+          const sh = Math.max(sticker.height * mapScale, 2)
+          const cx = sx + sw / 2
+          const cy = sy + sh / 2
+
+          return (
+            <image
+              key={sticker.id}
+              href={sticker.blur_data_url ?? sticker.image_url}
+              x={sx}
+              y={sy}
+              width={sw}
+              height={sh}
+              transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          )
+        })}
+
+        {/* Viewport indicator */}
+        {viewport && (
+          <rect
+            x={viewport.x}
+            y={viewport.y}
+            width={viewport.width}
+            height={viewport.height}
+            className="fill-foreground/5 stroke-foreground/50"
+            strokeWidth={1}
+            rx={1}
+            style={{ cursor: isDragging ? "grabbing" : "grab" }}
+          />
+        )}
+      </svg>
+    </div>
+  )
+}

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import type { Sticker as StickerType } from "@/lib/stickers"
+import { Button } from "@/components/ui/button"
 import { Sticker } from "./sticker"
 import { StickerToolbar } from "./sticker-toolbar"
+import { StickerMinimap } from "./sticker-minimap"
 
 const StickerCreator = dynamic(() =>
   import("./sticker-creator").then((mod) => ({ default: mod.StickerCreator })),
@@ -46,6 +48,12 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
     null
   )
+
+  // Container size for minimap viewport calc
+  const [containerSize, setContainerSize] = useState<{
+    width: number
+    height: number
+  } | null>(null)
 
   // Pinch state
   const pinchRef = useRef<{ dist: number; scale: number } | null>(null)
@@ -200,14 +208,33 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     return () => container.removeEventListener("wheel", onWheel)
   }, [handleWheel])
 
-  // Center the origin on mount
+  // Center the origin on mount + track container size
   useEffect(() => {
     const container = containerRef.current
-    if (container) {
-      const rect = container.getBoundingClientRect()
-      setTranslate({ x: rect.width / 2, y: rect.height / 2 })
-    }
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    setTranslate({ x: rect.width / 2, y: rect.height / 2 })
+    setContainerSize({ width: rect.width, height: rect.height })
+
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setContainerSize({ width, height })
+    })
+    ro.observe(container)
+    return () => ro.disconnect()
   }, [])
+
+  // Navigate to a world position (from minimap click)
+  const handleMinimapNavigate = useCallback(
+    (worldX: number, worldY: number) => {
+      if (!containerSize) return
+      setTranslate({
+        x: containerSize.width / 2 - worldX * scale,
+        y: containerSize.height / 2 - worldY * scale,
+      })
+    },
+    [containerSize, scale]
+  )
 
   // Compute viewport bounds in world coordinates
   const getViewportBounds = useCallback(() => {
@@ -379,7 +406,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         </div>
       </div>
 
-      {/* Toolbar */}
+      {/* Toolbar (minimap + zoom controls) */}
       <StickerToolbar
         onZoomIn={() =>
           setScale((s) => Math.min(MAX_SCALE, s * (1 + ZOOM_STEP)))
@@ -397,9 +424,28 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           }
           setScale(1)
         }}
-        onPlaceSticker={handlePlaceStickerClick}
-        isPlacing={isPlacing}
+        minimap={
+          <StickerMinimap
+            stickers={stickers}
+            translate={translate}
+            scale={scale}
+            containerSize={containerSize}
+            onNavigate={handleMinimapNavigate}
+          />
+        }
       />
+
+      {/* Place a sticker button */}
+      <div className="absolute bottom-3 left-1/2 z-40 -translate-x-1/2">
+        <Button
+          variant={isPlacing ? "outline" : "default"}
+          size="lg"
+          onClick={handlePlaceStickerClick}
+          className="shadow-md"
+        >
+          {isPlacing ? "Cancel" : "Place a sticker"}
+        </Button>
+      </div>
 
       {/* Placement hint */}
       {isPlacing && stickerPreviewUrl && (
