@@ -186,7 +186,8 @@ function EyeIcon({ saccade = false, blink = false }: EyeIconProps) {
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 160 160"
         className="inline-block h-[1em] w-[1em]"
-        aria-hidden="true"
+        role="img"
+        aria-label="eye"
       >
         <path
           d="M160,80c-15.98,27.59-45.82,46.17-80.01,46.17S15.98,107.59,0,80c15.98-27.61,45.82-46.17,79.99-46.17s64.03,18.56,80.01,46.17Z"
