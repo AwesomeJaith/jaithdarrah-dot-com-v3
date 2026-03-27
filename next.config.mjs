@@ -7,9 +7,6 @@ const nextConfig = {
     "onnxruntime-web",
     "onnxruntime-node",
   ],
-  experimental: {
-    optimizePackageImports: ["react-icons", "lucide-react", "date-fns"],
-  },
   images: {
     remotePatterns: [
       {
