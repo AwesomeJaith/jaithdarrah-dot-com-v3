@@ -9,6 +9,13 @@ export async function GET(request: Request) {
   // Verify cron secret to prevent unauthorized calls
   const authHeader = request.headers.get("authorization")
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    console.log(
+      JSON.stringify({
+        received: authHeader,
+        expected: `Bearer ${process.env.CRON_SECRET}`,
+        match: authHeader === `Bearer ${process.env.CRON_SECRET}`,
+      })
+    )
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -22,10 +29,9 @@ export async function GET(request: Request) {
 
   // Fetch current player data via RoyaleAPI proxy (no IP whitelisting needed)
   const tag = encodeURIComponent("#JRR90228")
-  const res = await fetch(
-    `https://proxy.royaleapi.dev/v1/players/${tag}`,
-    { headers: { Authorization: `Bearer ${apiKey}` } }
-  )
+  const res = await fetch(`https://proxy.royaleapi.dev/v1/players/${tag}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
 
   if (!res.ok) {
     return NextResponse.json(
@@ -43,9 +49,8 @@ export async function GET(request: Request) {
     args: ["battleCount"],
   })
 
-  const prevBattleCount = prev.rows.length > 0
-    ? Number(prev.rows[0].value)
-    : currentBattleCount
+  const prevBattleCount =
+    prev.rows.length > 0 ? Number(prev.rows[0].value) : currentBattleCount
 
   const delta = currentBattleCount - prevBattleCount
 
