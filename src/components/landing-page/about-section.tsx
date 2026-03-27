@@ -9,8 +9,7 @@ function AboutSection() {
         <div className="text-xl">
           <h1>
             <span className="text-primary">Jaith Darrah</span>. Software
-            engineer with an <EyeIcon saccade blink />{" "}
-            for details.
+            engineer with an <EyeIcon saccade blink /> for details.
           </h1>
           <h2>
             Currently engineering part time at{" "}

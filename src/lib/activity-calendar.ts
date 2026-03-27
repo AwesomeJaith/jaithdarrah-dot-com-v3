@@ -41,7 +41,7 @@ export class ActivityCalendarData {
     lastDay: Date,
     firstDayOfWeek: Day,
     fullYear = false,
-    weeks = 52,
+    weeks = 52
   ) {
     this.firstDayOfWeek = firstDayOfWeek
     this.weeks = weeks
@@ -68,16 +68,15 @@ export class ActivityCalendarData {
 
   protected buildData(
     data: (number | null | undefined)[],
-    lastDay: Date,
+    lastDay: Date
   ): (number | null | undefined)[] {
     const values = new Array(Math.max(0, 386 - data.length)).fill(
-      undefined,
+      undefined
     ) as (number | null | undefined)[]
     values.push(...data)
 
     const days = differenceInDays(this.endDay, this.startDay) + 1
-    const offset =
-      values.length - days + differenceInDays(this.endDay, lastDay)
+    const offset = values.length - days + differenceInDays(this.endDay, lastDay)
     return values.slice(offset)
   }
 
@@ -165,12 +164,12 @@ export class ActivityCalendarData {
 
   private getBuckets(): number[] {
     const filtered = this.data.filter(
-      (it): it is number => it !== null && it !== undefined,
+      (it): it is number => it !== null && it !== undefined
     )
     const sorted = [...filtered].sort((a, b) => a - b)
     const trimmed = sorted.slice(
       Math.round(sorted.length * 0.1),
-      sorted.length - Math.round(sorted.length * 0.1),
+      sorted.length - Math.round(sorted.length * 0.1)
     )
     const sum = trimmed.reduce((a, c) => a + c, 0)
     const mid = sum / trimmed.length

@@ -98,9 +98,7 @@ export async function deleteStickerById(id: string): Promise<void> {
   })
 }
 
-export async function getStickerById(
-  id: string
-): Promise<Sticker | undefined> {
+export async function getStickerById(id: string): Promise<Sticker | undefined> {
   const result = await turso.execute({
     sql: `SELECT * FROM stickers WHERE id = ?`,
     args: [id],
@@ -141,8 +139,14 @@ export async function checkOverlap(
     const sw = Number(row.width)
     const sh = Number(row.height)
 
-    const overlapX = Math.max(0, Math.min(newRight, sx + sw) - Math.max(newLeft, sx))
-    const overlapY = Math.max(0, Math.min(newBottom, sy + sh) - Math.max(newTop, sy))
+    const overlapX = Math.max(
+      0,
+      Math.min(newRight, sx + sw) - Math.max(newLeft, sx)
+    )
+    const overlapY = Math.max(
+      0,
+      Math.min(newBottom, sy + sh) - Math.max(newTop, sy)
+    )
     const overlapArea = overlapX * overlapY
 
     if (overlapArea / newArea > maxOverlapRatio) {

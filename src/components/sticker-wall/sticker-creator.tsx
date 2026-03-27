@@ -1,10 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import preset from "./sticker.json"
+import presetJson from "./sticker.json"
+import type { PipelineDefinition } from "pipemagic"
 import type { Sticker } from "@/lib/stickers"
 import { Button } from "@/components/ui/button"
 import { FaXmark, FaUpload } from "react-icons/fa6"
+
+const preset = presetJson as unknown as PipelineDefinition
 
 type StickerCreatorProps = {
   onClose: () => void
@@ -89,13 +92,10 @@ export function StickerCreator({
           return
         }
 
-        // Load pipemagic from CDN to bypass Turbopack transformation
-        // which breaks @huggingface/transformers internals
-
-        const { PipeMagic } = await import(
-          /* webpackIgnore: true */
-          "https://esm.sh/pipemagic@0.1.4"
-        )
+        // Load from CDN so the bundler never sees @huggingface/transformers
+        const { PipeMagic } = (await import(
+          /* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/pipemagic@0.1.4/+esm"
+        )) as typeof import("pipemagic")
         const pm = new PipeMagic()
         const { blob } = await pm.run(preset, file, {
           onNodeStatus: (nodeId: string, status: string, error?: string) => {

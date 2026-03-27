@@ -35,7 +35,7 @@ function isTypingTarget(target: EventTarget | null) {
 
 function toggleThemeWithTransition(
   resolvedTheme: string | undefined,
-  setTheme: (theme: string) => void,
+  setTheme: (theme: string) => void
 ) {
   const newTheme = resolvedTheme === "dark" ? "light" : "dark"
 

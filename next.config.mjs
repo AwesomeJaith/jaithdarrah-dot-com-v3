@@ -1,12 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   cacheComponents: true,
-  serverExternalPackages: [
-    "pipemagic",
-    "@huggingface/transformers",
-    "onnxruntime-web",
-    "onnxruntime-node",
-  ],
   images: {
     remotePatterns: [
       {

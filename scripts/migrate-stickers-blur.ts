@@ -8,9 +8,7 @@ const turso = createClient({
 })
 
 async function migrate() {
-  await turso.execute(
-    `ALTER TABLE stickers ADD COLUMN blur_data_url TEXT`
-  )
+  await turso.execute(`ALTER TABLE stickers ADD COLUMN blur_data_url TEXT`)
 
   console.log("Added blur_data_url column to stickers table")
 }

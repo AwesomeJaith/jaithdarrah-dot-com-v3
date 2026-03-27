@@ -110,7 +110,10 @@ export async function POST(request: Request) {
     const allowed = await checkOverlap(x, y, width, height)
     if (!allowed) {
       return NextResponse.json(
-        { error: "Too much overlap with existing stickers. Try a different spot!" },
+        {
+          error:
+            "Too much overlap with existing stickers. Try a different spot!",
+        },
         { status: 409 }
       )
     }

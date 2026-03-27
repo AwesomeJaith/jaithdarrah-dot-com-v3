@@ -2,14 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { Button } from "@/components/ui/button"
 import { Sticker } from "./sticker"
 import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
 
-const StickerCreator = dynamic(() =>
-  import("./sticker-creator").then((mod) => ({ default: mod.StickerCreator })),
+const StickerCreator = dynamic(
+  () =>
+    import("./sticker-creator").then((mod) => ({
+      default: mod.StickerCreator,
+    })),
   { ssr: false }
 )
 
@@ -119,7 +123,10 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         )
         const newScale = Math.min(
           MAX_SCALE,
-          Math.max(MIN_SCALE, pinchRef.current.scale * (dist / pinchRef.current.dist))
+          Math.max(
+            MIN_SCALE,
+            pinchRef.current.scale * (dist / pinchRef.current.dist)
+          )
         )
         setScale(newScale)
         return
@@ -314,10 +321,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       const tinyBlob = await canvas.convertToBlob({ type: "image/png" })
       const buffer = await tinyBlob.arrayBuffer()
       const base64 = btoa(
-        new Uint8Array(buffer).reduce(
-          (s, b) => s + String.fromCharCode(b),
-          ""
-        )
+        new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), "")
       )
       setBlurDataUrl(`data:image/png;base64,${base64}`)
     } catch {
@@ -358,9 +362,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         ref={containerRef}
         className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
         style={
-          isPlacing && stickerPreviewUrl
-            ? { cursor: "crosshair" }
-            : undefined
+          isPlacing && stickerPreviewUrl ? { cursor: "crosshair" } : undefined
         }
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -374,7 +376,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           }}
         >
           {/* Origin crosshair */}
-          <div className="absolute -left-px -top-4 h-8 w-0.5 bg-border" />
+          <div className="absolute -top-4 -left-px h-8 w-0.5 bg-border" />
           <div className="absolute -top-px -left-4 h-0.5 w-8 bg-border" />
 
           {/* Placed stickers */}
@@ -394,12 +396,14 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                 transform: `rotate(${placementRotation}deg)`,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={stickerPreviewUrl}
                 alt="Sticker preview"
                 className="h-full w-full object-contain"
                 draggable={false}
+                height={100}
+                width={100}
+                unoptimized
               />
             </div>
           )}
@@ -443,13 +447,13 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           onClick={handlePlaceStickerClick}
           className="shadow-md"
         >
-          {isPlacing ? "Cancel" : "Place a sticker"}
+          {isPlacing ? "Cancel" : "Create a sticker"}
         </Button>
       </div>
 
       {/* Placement hint */}
       {isPlacing && stickerPreviewUrl && (
-        <div className="absolute left-1/2 top-4 z-40 -translate-x-1/2 rounded-lg border border-border bg-popover px-4 py-2 text-sm text-popover-foreground shadow-md">
+        <div className="absolute top-4 left-1/2 z-40 -translate-x-1/2 rounded-lg border border-border bg-popover px-4 py-2 text-sm text-popover-foreground shadow-md">
           Click to place your sticker. Scroll to rotate.
         </div>
       )}

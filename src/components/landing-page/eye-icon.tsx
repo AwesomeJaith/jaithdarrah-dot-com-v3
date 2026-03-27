@@ -175,7 +175,7 @@ function EyeIcon({ saccade = false, blink = false }: EyeIconProps) {
 
   return (
     <span
-      className="hit-area hit-area-4 inline-block align-center"
+      className="align-center hit-area-4 hit-area inline-block"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
@@ -188,23 +188,23 @@ function EyeIcon({ saccade = false, blink = false }: EyeIconProps) {
         className="inline-block h-[1em] w-[1em]"
         aria-hidden="true"
       >
-      <path
-        d="M160,80c-15.98,27.59-45.82,46.17-80.01,46.17S15.98,107.59,0,80c15.98-27.61,45.82-46.17,79.99-46.17s64.03,18.56,80.01,46.17Z"
-        fill="currentColor"
-        style={{
-          transition: "transform 150ms ease-in-out",
-          transform: closed ? "scaleY(0.1)" : "scaleY(1)",
-          transformOrigin: "center",
-        }}
-      />
-      {!closed && (
-        <circle
-          cx={80 + offset.x}
-          cy={80 + offset.y}
-          r="23.09"
-          className="fill-background"
+        <path
+          d="M160,80c-15.98,27.59-45.82,46.17-80.01,46.17S15.98,107.59,0,80c15.98-27.61,45.82-46.17,79.99-46.17s64.03,18.56,80.01,46.17Z"
+          fill="currentColor"
+          style={{
+            transition: "transform 150ms ease-in-out",
+            transform: closed ? "scaleY(0.1)" : "scaleY(1)",
+            transformOrigin: "center",
+          }}
         />
-      )}
+        {!closed && (
+          <circle
+            cx={80 + offset.x}
+            cy={80 + offset.y}
+            r="23.09"
+            className="fill-background"
+          />
+        )}
       </svg>
     </span>
   )
