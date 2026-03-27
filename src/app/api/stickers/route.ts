@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     const formData = await request.formData()
 
     const image = formData.get("image") as File | null
+    const blurDataUrl = formData.get("blur_data_url") as string | null
     const username = formData.get("username") as string | null
     const message = formData.get("message") as string | null
     const x = Number(formData.get("x"))
@@ -89,10 +90,10 @@ export async function POST(request: Request) {
     }
 
     // Validate file type
-    const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
+    const allowedTypes = ["image/avif"]
     if (!allowedTypes.includes(image.type)) {
       return NextResponse.json(
-        { error: "Only PNG, JPEG, and WebP images are allowed" },
+        { error: "Only AVIF images are allowed" },
         { status: 400 }
       )
     }
@@ -123,6 +124,7 @@ export async function POST(request: Request) {
     // Save to database
     const sticker = await createSticker({
       image_url: blob.url,
+      blur_data_url: blurDataUrl || null,
       username: username.trim(),
       message: message?.trim() || null,
       x,

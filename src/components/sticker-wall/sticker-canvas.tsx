@@ -42,6 +42,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [placementRotation, setPlacementRotation] = useState(0)
   const [showCreator, setShowCreator] = useState(false)
   const [stickerBlob, setStickerBlob] = useState<Blob | null>(null)
+  const [blurDataUrl, setBlurDataUrl] = useState<string | null>(null)
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
     null
   )
@@ -268,13 +269,33 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     }
   }, [isPlacing, stickerPreviewUrl])
 
-  const handleStickerProcessed = useCallback((blob: Blob) => {
+  const handleStickerProcessed = useCallback(async (blob: Blob) => {
     const url = URL.createObjectURL(blob)
     setStickerBlob(blob)
     setStickerPreviewUrl(url)
     setShowCreator(false)
     setIsPlacing(true)
     setPlacementRotation(0)
+
+    // Generate blur placeholder in the background
+    try {
+      const bitmap = await createImageBitmap(blob)
+      const canvas = new OffscreenCanvas(16, 16)
+      const ctx = canvas.getContext("2d")!
+      ctx.drawImage(bitmap, 0, 0, 16, 16)
+      bitmap.close()
+      const tinyBlob = await canvas.convertToBlob({ type: "image/png" })
+      const buffer = await tinyBlob.arrayBuffer()
+      const base64 = btoa(
+        new Uint8Array(buffer).reduce(
+          (s, b) => s + String.fromCharCode(b),
+          ""
+        )
+      )
+      setBlurDataUrl(`data:image/png;base64,${base64}`)
+    } catch {
+      // Blur generation is best-effort
+    }
   }, [])
 
   const handleStickerSubmitted = useCallback(
@@ -286,6 +307,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       setPlacementPos(null)
       setPlacementRotation(0)
       setStickerBlob(null)
+      setBlurDataUrl(null)
       if (stickerPreviewUrl) {
         URL.revokeObjectURL(stickerPreviewUrl)
         setStickerPreviewUrl(null)
@@ -403,6 +425,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           onStickerProcessed={handleStickerProcessed}
           onStickerSubmitted={handleStickerSubmitted}
           stickerBlob={stickerBlob}
+          blurDataUrl={blurDataUrl}
           placementPos={placementPos}
           placementRotation={placementRotation}
         />

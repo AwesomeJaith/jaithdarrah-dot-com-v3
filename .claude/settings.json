@@ -1,6 +1,23 @@
 {
   "env": { "ENABLE_LSP_TOOL": "1" },
   "permissions": {
-    "allow": ["Bash(pnpm typecheck:*)", "Bash(pnpm lint:*)"]
+    "allow": [
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(ag:*)",
+      "Bash(fd:*)",
+      "Bash(locate:*)",
+      "Bash(which:*)",
+      "Bash(whereis:*)",
+      "Read",
+      "Glob",
+      "Grep"
+    ]
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true
   }
 }

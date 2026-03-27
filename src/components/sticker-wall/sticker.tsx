@@ -35,6 +35,8 @@ export function Sticker({ sticker }: { sticker: StickerType }) {
         height={sticker.height}
         className="pointer-events-none h-full w-full object-contain select-none"
         draggable={false}
+        placeholder={sticker.blur_data_url ? "blur" : "empty"}
+        blurDataURL={sticker.blur_data_url ?? undefined}
       />
     </div>
   )

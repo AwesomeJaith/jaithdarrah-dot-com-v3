@@ -11,8 +11,35 @@ type StickerCreatorProps = {
   onStickerProcessed: (blob: Blob) => void
   onStickerSubmitted: (sticker: Sticker) => void
   stickerBlob: Blob | null
+  blurDataUrl: string | null
   placementPos: { x: number; y: number } | null
   placementRotation: number
+}
+
+async function convertToAvif(blob: Blob): Promise<Blob> {
+  const { encode } = await import("@jsquash/avif")
+  const bitmap = await createImageBitmap(blob)
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+  const ctx = canvas.getContext("2d")!
+  ctx.drawImage(bitmap, 0, 0)
+  bitmap.close()
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const avifBuffer = await encode(imageData, { quality: 50 })
+  return new Blob([avifBuffer], { type: "image/avif" })
+}
+
+async function generateBlurDataUrl(blob: Blob): Promise<string> {
+  const bitmap = await createImageBitmap(blob)
+  const canvas = new OffscreenCanvas(16, 16)
+  const ctx = canvas.getContext("2d")!
+  ctx.drawImage(bitmap, 0, 0, 16, 16)
+  bitmap.close()
+  const tinyBlob = await canvas.convertToBlob({ type: "image/png" })
+  const buffer = await tinyBlob.arrayBuffer()
+  const base64 = btoa(
+    new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), "")
+  )
+  return `data:image/png;base64,${base64}`
 }
 
 // TODO: Improve sticker creator, integrate into notch, add transitions for going from bottom to top, transform increase with easings, also add slide through guide on how to create a sticker and place it.
@@ -21,6 +48,7 @@ export function StickerCreator({
   onStickerProcessed,
   onStickerSubmitted,
   stickerBlob,
+  blurDataUrl,
   placementPos,
   placementRotation,
 }: StickerCreatorProps) {
@@ -79,7 +107,10 @@ export function StickerCreator({
             console.log(`[PipeMagic] ${nodeId}: ${Math.round(progress * 100)}%`)
           },
         })
-        onStickerProcessed(blob)
+
+        // Convert to AVIF for smaller file size
+        const avifBlob = await convertToAvif(blob)
+        onStickerProcessed(avifBlob)
       } catch (err) {
         console.error("PipeMagic processing failed:", err)
         setError("Failed to process image. Please try another one.")
@@ -123,8 +154,12 @@ export function StickerCreator({
           username.trim()
         )
 
+        // Generate blur placeholder from the AVIF blob
+        const blur = blurDataUrl ?? (await generateBlurDataUrl(stickerBlob))
+
         const formData = new FormData()
-        formData.append("image", stickerBlob, "sticker.png")
+        formData.append("image", stickerBlob, "sticker.avif")
+        formData.append("blur_data_url", blur)
         formData.append("username", username.trim())
         if (message.trim()) formData.append("message", message.trim())
         formData.append("x", String(placementPos.x))
@@ -155,6 +190,7 @@ export function StickerCreator({
     },
     [
       stickerBlob,
+      blurDataUrl,
       placementPos,
       placementRotation,
       username,
