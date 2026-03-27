@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useSyncExternalStore } from "react"
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { ActivityCalendarData } from "@/lib/activity-calendar"
 
 const breakpoints = [
@@ -19,7 +19,8 @@ function getWeeks() {
 function subscribeToBreakpoints(callback: () => void) {
   const mqls = breakpoints.map((bp) => window.matchMedia(bp.query))
   mqls.forEach((mql) => mql.addEventListener("change", callback))
-  return () => mqls.forEach((mql) => mql.removeEventListener("change", callback))
+  return () =>
+    mqls.forEach((mql) => mql.removeEventListener("change", callback))
 }
 
 type Props = {
@@ -60,6 +61,17 @@ function ActivityCalendar({
 }: Props) {
   const levelColors = getLevelColors(color)
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
+
+  useEffect(() => {
+    if (!tooltip) return
+
+    const dismiss = () => setTooltip(null)
+    const options = { passive: true, capture: true }
+
+    window.addEventListener("scroll", dismiss, options)
+    return () => window.removeEventListener("scroll", dismiss, options)
+  }, [tooltip])
+
   const weeks = useSyncExternalStore(subscribeToBreakpoints, getWeeks, () => 52)
 
   const calendar = useMemo(
@@ -200,17 +212,22 @@ function ActivityCalendar({
         </div>
       </div>
 
-      {/* Single floating tooltip */}
+      {/* Single floating tooltip — pinned to cursor, clamped to viewport via CSS */}
       {tooltip && (
         <div
-          className="pointer-events-none fixed z-50 rounded bg-foreground px-2 py-1 text-xs text-background"
-          style={{
-            left: tooltip.x,
-            top: tooltip.y - 40,
-            transform: "translateX(-50%)",
-          }}
+          className="pointer-events-none fixed inset-x-0 z-50 flex justify-center px-2"
+          style={{ top: tooltip.y - 40 }}
         >
-          {tooltip.text}
+          <div
+            className="rounded bg-foreground px-2 py-1 text-xs text-background"
+            style={{
+              minWidth: "8rem",
+              textAlign: "center",
+              marginLeft: `calc(${tooltip.x}px - 50%)`,
+            }}
+          >
+            {tooltip.text}
+          </div>
         </div>
       )}
     </div>
