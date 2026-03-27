@@ -8,7 +8,7 @@ import { FaLinkedin } from "react-icons/fa"
 const socials = [
   {
     socialIcon: <FaXTwitter />,
-    socialLink: "https://x.com/darrah_jaith",
+    socialLink: "https://x.com/JaithD",
     label: "X.com profile",
     className: "-rotate-6",
   },
