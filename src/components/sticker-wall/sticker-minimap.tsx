@@ -23,22 +23,35 @@ export function StickerMinimap({
   onNavigate,
   size: minimapSize = DEFAULT_SIZE,
 }: StickerMinimapProps) {
-  // Calculate world bounds symmetric around origin so the + is always centered
+  // Calculate world bounds from actual sticker positions + origin,
+  // expanded to fit the viewport at the current zoom level
   const worldBounds = useMemo(() => {
-    let extent = 0
+    let minX = 0
+    let minY = 0
+    let maxX = 0
+    let maxY = 0
+
     for (const s of stickers) {
-      extent = Math.max(
-        extent,
-        Math.abs(s.x),
-        Math.abs(s.y),
-        Math.abs(s.x + s.width),
-        Math.abs(s.y + s.height)
-      )
+      minX = Math.min(minX, s.x)
+      minY = Math.min(minY, s.y)
+      maxX = Math.max(maxX, s.x + s.width)
+      maxY = Math.max(maxY, s.y + s.height)
     }
-    const pad = 200
-    const half = extent + pad
-    return { minX: -half, minY: -half, maxX: half, maxY: half }
-  }, [stickers])
+
+    // Pad by half the viewport size so the viewport rect fits in the minimap
+    const padX = containerSize
+      ? Math.max(containerSize.width / scale / 2, 200)
+      : 200
+    const padY = containerSize
+      ? Math.max(containerSize.height / scale / 2, 200)
+      : 200
+    return {
+      minX: minX - padX,
+      minY: minY - padY,
+      maxX: maxX + padX,
+      maxY: maxY + padY,
+    }
+  }, [stickers, containerSize, scale])
 
   const worldWidth = worldBounds.maxX - worldBounds.minX
   const worldHeight = worldBounds.maxY - worldBounds.minY

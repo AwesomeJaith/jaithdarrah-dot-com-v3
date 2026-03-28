@@ -77,7 +77,12 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   )
   const stickers = useMemo(() => Array.from(stickerMap.values()), [stickerMap])
   const [translate, setTranslate] = useState({ x: 0, y: 0 })
-  const [scale, setScale] = useState(1)
+  const [scale, _setScale] = useState(1)
+  const scaleRef = useRef(1)
+  const setScale = useCallback((s: number) => {
+    scaleRef.current = s
+    _setScale(s)
+  }, [])
 
   // Pan state
   const isPanningRef = useRef(false)
@@ -139,6 +144,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     translate: { x: number; y: number }
   } | null>(null)
   const pointersRef = useRef<Map<number, PointerEvent>>(new Map())
+  const initialSizeRef = useRef<{ width: number; height: number } | null>(null)
 
   // Convert screen coordinates to world coordinates
   const screenToWorld = useCallback(
@@ -315,24 +321,25 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       const container = containerRef.current
       if (!container) return
       const rect = container.getBoundingClientRect()
-      const mouseX = e.clientX - rect.left
-      const mouseY = e.clientY - rect.top
+      const cursorX = e.clientX - rect.left
+      const cursorY = e.clientY - rect.top
 
+      const currentScale = scaleRef.current
       const zoomFactor = e.deltaY > 0 ? 1 - ZOOM_STEP : 1 + ZOOM_STEP
       const newScale = Math.min(
         MAX_SCALE,
-        Math.max(MIN_SCALE, scale * zoomFactor)
+        Math.max(MIN_SCALE, currentScale * zoomFactor)
       )
 
-      // Adjust translate so zoom centers on cursor
-      const scaleChange = newScale / scale
+      // Adjust translate so zoom centers on cursor position
+      const scaleChange = newScale / currentScale
       setTranslate((prev) => ({
-        x: mouseX - (mouseX - prev.x) * scaleChange,
-        y: mouseY - (mouseY - prev.y) * scaleChange,
+        x: cursorX - (cursorX - prev.x) * scaleChange,
+        y: cursorY - (cursorY - prev.y) * scaleChange,
       }))
       setScale(newScale)
     },
-    [scale, isPlacing, stickerPreviewUrl]
+    [isPlacing, stickerPreviewUrl, setScale]
   )
 
   // Attach wheel handler as non-passive so preventDefault works
@@ -404,13 +411,14 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     const { width, height } = container.getBoundingClientRect()
     setTranslate({ x: width / 2, y: height / 2 })
     setContainerSize({ width, height })
+    initialSizeRef.current = { width, height }
   }, [])
 
   // Keep origin centered when the container resizes after mount
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const prevSize = container.getBoundingClientRect()
+    const prevSize = initialSizeRef.current ?? container.getBoundingClientRect()
 
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
@@ -714,10 +722,11 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             setScale((s) => Math.max(MIN_SCALE, s * (1 - ZOOM_STEP)))
           }
           onResetView={() => {
-            const container = containerRef.current
-            if (container) {
-              const rect = container.getBoundingClientRect()
-              setTranslate({ x: rect.width / 2, y: rect.height / 2 })
+            if (containerSize) {
+              setTranslate({
+                x: containerSize.width / 2,
+                y: containerSize.height / 2,
+              })
             } else {
               setTranslate({ x: 0, y: 0 })
             }
