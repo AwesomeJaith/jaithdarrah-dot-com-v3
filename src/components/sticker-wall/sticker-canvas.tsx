@@ -138,7 +138,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       isPanningRef.current = true
       panStartRef.current = { x: e.clientX, y: e.clientY }
       translateStartRef.current = { ...translate }
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      // Capture on the container so pointerup always fires here
+      containerRef.current?.setPointerCapture(e.pointerId)
     },
     [translate, scale, isPlacing, stickerPreviewUrl]
   )
@@ -449,6 +450,10 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onLostPointerCapture={(e) => {
+          pointersRef.current.delete(e.pointerId)
+          if (pointersRef.current.size < 2) pinchRef.current = null
+        }}
       >
         <div
           className="origin-top-left will-change-transform"

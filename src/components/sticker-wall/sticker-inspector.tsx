@@ -1,7 +1,13 @@
 "use client"
 
 import Image from "next/image"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
+import {
+  useMotionValue,
+  useMotionTemplate,
+  useSpring,
+  motion,
+} from "motion/react"
 import type { Sticker } from "@/lib/stickers"
 
 type StickerInspectorProps = {
@@ -9,52 +15,62 @@ type StickerInspectorProps = {
   onClose: () => void
 }
 
-const INITIAL_TILT = { x: 0, y: 0 }
-const INITIAL_GLOSS = { x: 50, y: 50 }
+const INTERACT_SPRING = { stiffness: 300, damping: 20 }
 
 export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
   const cardRef = useRef<HTMLDivElement>(null)
-  const [tilt, setTilt] = useState(INITIAL_TILT)
-  const [gloss, setGloss] = useState(INITIAL_GLOSS)
+  const pendingRef = useRef<{ nx: number; ny: number } | null>(null)
   const rafRef = useRef<number | null>(null)
 
-  const applyTilt = useCallback((nx: number, ny: number) => {
-    // nx, ny are normalized -1..1 relative to card center
-    const rotateY = nx * 20
-    const rotateX = -ny * 20
-    const glossX = 50 + nx * 35
-    const glossY = 50 + ny * 35
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    rafRef.current = requestAnimationFrame(() => {
-      setTilt({ x: rotateX, y: rotateY })
-      setGloss({ x: glossX, y: glossY })
-    })
-  }, [])
+  // Spring-driven tilt and gloss
+  const tiltX = useMotionValue(0)
+  const tiltY = useMotionValue(0)
+  const glossX = useMotionValue(50)
+  const glossY = useMotionValue(50)
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const card = cardRef.current
-      if (!card) return
-      const rect = card.getBoundingClientRect()
-      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1
-      const ny = ((e.clientY - rect.top) / rect.height) * 2 - 1
-      applyTilt(nx, ny)
+  const springTiltX = useSpring(tiltX, INTERACT_SPRING)
+  const springTiltY = useSpring(tiltY, INTERACT_SPRING)
+  const springGlossX = useSpring(glossX, INTERACT_SPRING)
+  const springGlossY = useSpring(glossY, INTERACT_SPRING)
+
+  // Build the transform and gloss gradient as motion templates
+  const transformStyle = useMotionTemplate`rotateX(${springTiltX}deg) rotateY(${springTiltY}deg)`
+  const glossGradient = useMotionTemplate`radial-gradient(circle at ${springGlossX}% ${springGlossY}%, rgba(255,255,255,0.8) 0%, transparent 65%)`
+
+  const applyTilt = useCallback(
+    (nx: number, ny: number) => {
+      // Store latest values, apply once per frame
+      pendingRef.current = { nx, ny }
+      if (rafRef.current !== null) return
+      rafRef.current = requestAnimationFrame(() => {
+        const p = pendingRef.current
+        if (p) {
+          tiltX.set(-p.ny * 20)
+          tiltY.set(p.nx * 20)
+          glossX.set(50 + p.nx * 35)
+          glossY.set(50 + p.ny * 35)
+          pendingRef.current = null
+        }
+        rafRef.current = null
+      })
     },
-    [applyTilt]
+    [tiltX, tiltY, glossX, glossY]
   )
 
-  const handleMouseLeave = useCallback(() => {
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    rafRef.current = requestAnimationFrame(() => {
-      setTilt(INITIAL_TILT)
-      setGloss(INITIAL_GLOSS)
-    })
-  }, [])
+  const resetTilt = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    pendingRef.current = null
+    tiltX.set(0)
+    tiltY.set(0)
+    glossX.set(50)
+    glossY.set(50)
+  }, [tiltX, tiltY, glossX, glossY])
 
-  // Touch / pointer tilt
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (e.pointerType === "mouse") return // handled by mousemove
       const card = cardRef.current
       if (!card) return
       const rect = card.getBoundingClientRect()
@@ -65,24 +81,15 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
     [applyTilt]
   )
 
-  // Device orientation (mobile gyroscope)
-  useEffect(() => {
-    const handler = (e: DeviceOrientationEvent) => {
-      // gamma: left/right tilt (-90..90), beta: front/back tilt (-180..180)
-      const nx = Math.max(-1, Math.min(1, (e.gamma ?? 0) / 30))
-      const ny = Math.max(-1, Math.min(1, ((e.beta ?? 0) - 30) / 30))
-      applyTilt(nx, ny)
-    }
-    window.addEventListener("deviceorientation", handler)
-    return () => window.removeEventListener("deviceorientation", handler)
-  }, [applyTilt])
+  const handlePointerLeave = useCallback(() => {
+    resetTilt()
+  }, [resetTilt])
 
   // Escape key to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault()
-        // Blur any focused sticker so it doesn't get highlighted after close
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur()
         }
@@ -93,7 +100,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
     return () => window.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Cleanup raf on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
@@ -127,22 +134,21 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
         {/* Sticker image with 3D tilt */}
         <div
           ref={cardRef}
-          className="relative select-none"
+          className="relative touch-none select-none"
           style={{
-            perspective: "800px",
+            perspective: "600px",
             width: Math.min(sticker.width * 2, 320),
             height: Math.min(sticker.height * 2, 320),
           }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
           onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
         >
-          <div
-            className="relative h-full w-full"
+          <motion.div
+            className="relative h-full w-full will-change-transform"
             style={{
-              transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-              transition: "transform 0.08s ease-out",
+              transform: transformStyle,
               transformStyle: "preserve-3d",
+              outline: "1px solid transparent",
             }}
           >
             <Image
@@ -155,14 +161,13 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               blurDataURL={sticker.blur_data_url ?? undefined}
             />
             {/* Gloss overlay */}
-            <div
+            <motion.div
               className="pointer-events-none absolute inset-0 rounded-sm opacity-25"
               style={{
-                background: `radial-gradient(circle at ${gloss.x}% ${gloss.y}%, rgba(255,255,255,0.8) 0%, transparent 65%)`,
-                transition: "background 0.08s ease-out",
+                background: glossGradient,
               }}
             />
-          </div>
+          </motion.div>
         </div>
 
         {/* Info card */}
