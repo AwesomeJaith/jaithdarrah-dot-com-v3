@@ -23,6 +23,15 @@ type StickerCanvasProps = {
   initialStickers: StickerType[]
 }
 
+const MINIMAP_COMPACT_SIZE = 100
+const MINIMAP_DEFAULT_SIZE = 120
+const TOOLBAR_MARGIN = 12
+const TOOLBAR_GAP = 6 // gap-1.5
+const COMPACT_BREAKPOINT = 530
+const MOVE_MS = 200
+const SIZE_MS = 120
+const EASE = "cubic-bezier(0.4, 0, 0.2, 1)"
+
 const MIN_SCALE = 0.1
 const MAX_SCALE = 3
 const ZOOM_STEP = 0.15
@@ -104,6 +113,15 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     width: number
     height: number
   } | null>(null)
+
+  const zoomRowRef = useRef<HTMLDivElement>(null)
+  const [zoomRowHeight, setZoomRowHeight] = useState(0)
+
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false
+  )
 
   // Pinch state
   const pinchRef = useRef<{
@@ -403,6 +421,69 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     return () => ro.disconnect()
   }, [])
 
+  useEffect(() => {
+    const el = zoomRowRef.current
+    if (el) setZoomRowHeight(el.offsetHeight)
+  }, [])
+
+  // Detect prefers-reduced-motion changes
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const handler = (e: MediaQueryListEvent) =>
+      setPrefersReducedMotion(e.matches)
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [])
+
+  // Responsive minimap positioning — based on window width, not container
+  const [isCompact, setIsCompact] = useState(() =>
+    typeof window !== "undefined"
+      ? window.innerWidth <= COMPACT_BREAKPOINT
+      : false
+  )
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${COMPACT_BREAKPOINT}px)`)
+    const handler = (e: MediaQueryListEvent) => setIsCompact(e.matches)
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [])
+  const minimapSize = isCompact ? MINIMAP_COMPACT_SIZE : MINIMAP_DEFAULT_SIZE
+  const toolbarTop =
+    isCompact || !containerSize
+      ? TOOLBAR_MARGIN
+      : containerSize.height -
+        minimapSize -
+        TOOLBAR_GAP -
+        zoomRowHeight -
+        TOOLBAR_MARGIN
+
+  // Only animate when crossing the breakpoint, not on regular resize.
+  const prevIsCompactRef = useRef(isCompact)
+  const toolbarWrapperRef = useRef<HTMLDivElement>(null)
+  const minimapWrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (prevIsCompactRef.current === isCompact) return
+    prevIsCompactRef.current = isCompact
+
+    const tw = toolbarWrapperRef.current
+    const mw = minimapWrapperRef.current
+    if (!tw || !mw || prefersReducedMotion) return
+
+    const sizeDelay = isCompact ? MOVE_MS : 0
+    const moveDelay = isCompact ? 0 : SIZE_MS
+    tw.style.transition = `top ${MOVE_MS}ms ${EASE} ${moveDelay}ms, width ${SIZE_MS}ms ${EASE} ${sizeDelay}ms`
+    mw.style.transition = `width ${SIZE_MS}ms ${EASE} ${sizeDelay}ms, height ${SIZE_MS}ms ${EASE} ${sizeDelay}ms`
+
+    const totalMs = MOVE_MS + SIZE_MS + 50
+    const timer = setTimeout(() => {
+      tw.style.transition = "none"
+      mw.style.transition = "none"
+    }, totalMs)
+    return () => clearTimeout(timer)
+  }, [isCompact, prefersReducedMotion])
+
   // Navigate to a world position (from minimap click)
   const handleMinimapNavigate = useCallback(
     (worldX: number, worldY: number) => {
@@ -530,7 +611,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   }, [stickerBlob])
 
   return (
-    <div className="relative h-full w-full rounded-xl bg-muted/30">
+    <div className="relative h-full w-full overflow-hidden rounded-xl bg-muted/30">
       {/* Canvas */}
       <div
         ref={containerRef}
@@ -598,33 +679,48 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       </div>
 
       {/* Toolbar (minimap + zoom controls) */}
-      <StickerToolbar
-        onZoomIn={() =>
-          setScale((s) => Math.min(MAX_SCALE, s * (1 + ZOOM_STEP)))
-        }
-        onZoomOut={() =>
-          setScale((s) => Math.max(MIN_SCALE, s * (1 - ZOOM_STEP)))
-        }
-        onResetView={() => {
-          const container = containerRef.current
-          if (container) {
-            const rect = container.getBoundingClientRect()
-            setTranslate({ x: rect.width / 2, y: rect.height / 2 })
-          } else {
-            setTranslate({ x: 0, y: 0 })
+      <div
+        ref={toolbarWrapperRef}
+        className="absolute z-40"
+        style={{ top: toolbarTop, right: TOOLBAR_MARGIN, width: minimapSize }}
+      >
+        <StickerToolbar
+          zoomRowRef={zoomRowRef}
+          onZoomIn={() =>
+            setScale((s) => Math.min(MAX_SCALE, s * (1 + ZOOM_STEP)))
           }
-          setScale(1)
-        }}
-        minimap={
-          <StickerMinimap
-            stickers={stickers}
-            translate={translate}
-            scale={scale}
-            containerSize={containerSize}
-            onNavigate={handleMinimapNavigate}
-          />
-        }
-      />
+          onZoomOut={() =>
+            setScale((s) => Math.max(MIN_SCALE, s * (1 - ZOOM_STEP)))
+          }
+          onResetView={() => {
+            const container = containerRef.current
+            if (container) {
+              const rect = container.getBoundingClientRect()
+              setTranslate({ x: rect.width / 2, y: rect.height / 2 })
+            } else {
+              setTranslate({ x: 0, y: 0 })
+            }
+            setScale(1)
+            // Reset sticker map to initial set so minimap world bounds contract
+            setStickerMap(new Map(initialStickers.map((s) => [s.id, s])))
+          }}
+          minimap={
+            <div
+              ref={minimapWrapperRef}
+              style={{ width: minimapSize, height: minimapSize }}
+            >
+              <StickerMinimap
+                stickers={stickers}
+                translate={translate}
+                scale={scale}
+                containerSize={containerSize}
+                onNavigate={handleMinimapNavigate}
+                size={minimapSize}
+              />
+            </div>
+          }
+        />
+      </div>
 
       {/* Border with notch cutout — notchPad guarantees px of space between buttons and stroke */}
       {containerSize && notchSize && (

@@ -9,9 +9,10 @@ type StickerMinimapProps = {
   scale: number
   containerSize: { width: number; height: number } | null
   onNavigate: (worldX: number, worldY: number) => void
+  size?: number
 }
 
-const MINIMAP_SIZE = 120
+const DEFAULT_SIZE = 120
 const PADDING = 8
 
 export function StickerMinimap({
@@ -20,6 +21,7 @@ export function StickerMinimap({
   scale,
   containerSize,
   onNavigate,
+  size: minimapSize = DEFAULT_SIZE,
 }: StickerMinimapProps) {
   // Calculate world bounds symmetric around origin so the + is always centered
   const worldBounds = useMemo(() => {
@@ -44,14 +46,14 @@ export function StickerMinimap({
   // Fit world into minimap maintaining aspect ratio
   const mapScale = useMemo(() => {
     if (worldWidth === 0 || worldHeight === 0) return 1
-    const inner = MINIMAP_SIZE - PADDING * 2
+    const inner = minimapSize - PADDING * 2
     return Math.min(inner / worldWidth, inner / worldHeight)
-  }, [worldWidth, worldHeight])
+  }, [worldWidth, worldHeight, minimapSize])
 
   const mapW = worldWidth * mapScale
   const mapH = worldHeight * mapScale
-  const offsetX = (MINIMAP_SIZE - mapW) / 2
-  const offsetY = (MINIMAP_SIZE - mapH) / 2
+  const offsetX = (minimapSize - mapW) / 2
+  const offsetY = (minimapSize - mapH) / 2
 
   // Viewport rectangle in minimap coordinates
   const viewport = useMemo(() => {
@@ -83,8 +85,11 @@ export function StickerMinimap({
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect()
-      const mx = e.clientX - rect.left
-      const my = e.clientY - rect.top
+      // Scale from rendered size to viewBox (logical) coordinates
+      const sx = minimapSize / rect.width
+      const sy = minimapSize / rect.height
+      const mx = (e.clientX - rect.left) * sx
+      const my = (e.clientY - rect.top) * sy
 
       // Check if pointer is inside the viewport rect
       if (
@@ -107,19 +112,21 @@ export function StickerMinimap({
         onNavigate(world.x, world.y)
       }
     },
-    [viewport, minimapToWorld, onNavigate]
+    [viewport, minimapToWorld, onNavigate, minimapSize]
   )
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (!dragRef.current) return
       const rect = e.currentTarget.getBoundingClientRect()
-      const mx = e.clientX - rect.left - dragRef.current.offsetX
-      const my = e.clientY - rect.top - dragRef.current.offsetY
+      const sx = minimapSize / rect.width
+      const sy = minimapSize / rect.height
+      const mx = (e.clientX - rect.left) * sx - dragRef.current.offsetX
+      const my = (e.clientY - rect.top) * sy - dragRef.current.offsetY
       const world = minimapToWorld(mx, my)
       onNavigate(world.x, world.y)
     },
-    [minimapToWorld, onNavigate]
+    [minimapToWorld, onNavigate, minimapSize]
   )
 
   const handlePointerUp = useCallback(() => {
@@ -131,10 +138,8 @@ export function StickerMinimap({
 
   return (
     <div
-      className="rounded-lg border border-border bg-popover shadow-md"
+      className="h-full w-full rounded-lg border border-border bg-popover shadow-md"
       style={{
-        width: MINIMAP_SIZE,
-        height: MINIMAP_SIZE,
         cursor: isDragging ? "grabbing" : "pointer",
         touchAction: "none",
       }}
@@ -145,9 +150,8 @@ export function StickerMinimap({
       aria-label="Mini map"
     >
       <svg
-        width={MINIMAP_SIZE}
-        height={MINIMAP_SIZE}
-        className="overflow-hidden rounded-lg"
+        viewBox={`0 0 ${minimapSize} ${minimapSize}`}
+        className="h-full w-full overflow-hidden rounded-lg"
       >
         {/* Origin crosshair */}
         <line

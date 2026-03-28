@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import type { ReactNode, Ref } from "react"
 import { FaPlus, FaMinus, FaCompass } from "react-icons/fa6"
 import { Button } from "@/components/ui/button"
 
@@ -9,6 +9,7 @@ type StickerToolbarProps = {
   onZoomOut: () => void
   onResetView: () => void
   minimap?: ReactNode
+  zoomRowRef?: Ref<HTMLDivElement>
 }
 
 export function StickerToolbar({
@@ -16,11 +17,12 @@ export function StickerToolbar({
   onZoomOut,
   onResetView,
   minimap,
+  zoomRowRef,
 }: StickerToolbarProps) {
   return (
-    <div className="absolute right-3 bottom-3 z-40 flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       {minimap}
-      <div className="flex gap-1 rounded-lg border border-border bg-popover p-1 shadow-md">
+      <div ref={zoomRowRef} className="flex gap-1 rounded-lg border border-border bg-popover p-1 shadow-md">
         <Button
           variant="ghost"
           size="icon-sm"
