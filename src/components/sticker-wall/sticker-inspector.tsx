@@ -80,7 +80,14 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
   // Escape key to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
+      if (e.key === "Escape") {
+        e.preventDefault()
+        // Blur any focused sticker so it doesn't get highlighted after close
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+        onClose()
+      }
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
@@ -114,51 +121,54 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
 
       {/* Card — stop propagation so clicking the sticker itself doesn't close */}
       <div
-        ref={cardRef}
-        className="relative z-10 flex flex-col items-center gap-6 select-none"
-        style={{ perspective: "800px" }}
+        className="relative z-10 flex flex-col items-center gap-6"
         onClick={(e) => e.stopPropagation()}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onPointerMove={handlePointerMove}
       >
         {/* Sticker image with 3D tilt */}
         <div
-          className="relative"
+          ref={cardRef}
+          className="relative select-none"
           style={{
-            transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-            transition: "transform 0.08s ease-out",
-            transformStyle: "preserve-3d",
+            perspective: "800px",
             width: Math.min(sticker.width * 2, 320),
             height: Math.min(sticker.height * 2, 320),
           }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onPointerMove={handlePointerMove}
         >
-          <Image
-            src={sticker.image_url}
-            alt={`Sticker by ${sticker.username}`}
-            fill
-            className="object-contain drop-shadow-2xl"
-            draggable={false}
-            placeholder={sticker.blur_data_url ? "blur" : "empty"}
-            blurDataURL={sticker.blur_data_url ?? undefined}
-          />
-          {/* Gloss overlay */}
           <div
-            className="pointer-events-none absolute inset-0 rounded-sm opacity-25"
+            className="relative h-full w-full"
             style={{
-              background: `radial-gradient(circle at ${gloss.x}% ${gloss.y}%, rgba(255,255,255,0.8) 0%, transparent 65%)`,
-              transition: "background 0.08s ease-out",
+              transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+              transition: "transform 0.08s ease-out",
+              transformStyle: "preserve-3d",
             }}
-          />
+          >
+            <Image
+              src={sticker.image_url}
+              alt={`Sticker by ${sticker.username}`}
+              fill
+              className="object-contain drop-shadow-2xl"
+              draggable={false}
+              placeholder={sticker.blur_data_url ? "blur" : "empty"}
+              blurDataURL={sticker.blur_data_url ?? undefined}
+            />
+            {/* Gloss overlay */}
+            <div
+              className="pointer-events-none absolute inset-0 rounded-sm opacity-25"
+              style={{
+                background: `radial-gradient(circle at ${gloss.x}% ${gloss.y}%, rgba(255,255,255,0.8) 0%, transparent 65%)`,
+                transition: "background 0.08s ease-out",
+              }}
+            />
+          </div>
         </div>
 
         {/* Info card */}
         <div className="animate-in rounded-xl border border-border bg-popover px-5 py-4 text-center shadow-xl duration-200 fade-in slide-in-from-bottom-3">
           <p className="text-sm font-semibold text-popover-foreground">
-            placed by{" "}
-            <span className="underline underline-offset-2">
-              {sticker.username}
-            </span>
+            Placed by {sticker.username}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {formattedDate}

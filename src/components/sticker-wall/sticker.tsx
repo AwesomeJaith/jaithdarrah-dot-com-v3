@@ -35,7 +35,8 @@ export function Sticker({ sticker, onInspect }: StickerProps) {
 
   return (
     <div
-      className="group absolute animate-pop-in"
+      className="group absolute animate-pop-in select-none"
+      onDragStart={(e) => e.preventDefault()}
       style={{
         left: sticker.x,
         top: sticker.y,
