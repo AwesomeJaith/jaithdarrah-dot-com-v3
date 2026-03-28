@@ -179,7 +179,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
         </div>
 
         {/* Info card */}
-        <div className="animate-in rounded-xl border border-border bg-popover px-5 py-4 text-center shadow-xl duration-200 fade-in slide-in-from-bottom-3">
+        <div className="w-80 animate-in rounded-xl border border-border bg-popover px-5 py-4 text-center shadow-xl duration-200 fade-in slide-in-from-bottom-3">
           <p className="text-sm font-semibold text-popover-foreground">
             Placed by {sticker.username}
           </p>
@@ -187,7 +187,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
             {formattedDate}
           </p>
           {sticker.message && (
-            <p className="mt-2 max-w-xs text-sm text-popover-foreground/80 italic">
+            <p className="mt-2 text-sm text-popover-foreground/80 italic">
               &ldquo;{sticker.message}&rdquo;
             </p>
           )}

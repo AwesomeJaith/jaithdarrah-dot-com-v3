@@ -273,9 +273,14 @@ export function StickerCreator({
             <h2 className="text-lg font-medium">Add your info</h2>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="username" className="text-sm font-medium">
-                Username
-              </label>
+              <div className="flex items-baseline justify-between">
+                <label htmlFor="username" className="text-sm font-medium">
+                  Username
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  {username.length}/20
+                </span>
+              </div>
               <input
                 id="username"
                 type="text"
@@ -289,10 +294,15 @@ export function StickerCreator({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="message" className="text-sm font-medium">
-                Message{" "}
-                <span className="text-muted-foreground">(optional)</span>
-              </label>
+              <div className="flex items-baseline justify-between">
+                <label htmlFor="message" className="text-sm font-medium">
+                  Message{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  {message.length}/300
+                </span>
+              </div>
               <textarea
                 id="message"
                 maxLength={200}
