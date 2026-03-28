@@ -1,6 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import type { Sticker as StickerType } from "@/lib/stickers"
@@ -390,16 +397,30 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     }
   }, [isPlacing, stickerPreviewUrl, scale])
 
-  // Center the origin on mount + track container size
+  // Synchronous initial measurement to prevent first-frame flash of translate={0,0}
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const { width, height } = container.getBoundingClientRect()
+    setTranslate({ x: width / 2, y: height / 2 })
+    setContainerSize({ width, height })
+  }, [])
+
+  // Keep origin centered when the container resizes after mount
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const rect = container.getBoundingClientRect()
-    setTranslate({ x: rect.width / 2, y: rect.height / 2 })
-    setContainerSize({ width: rect.width, height: rect.height })
+    const prevSize = container.getBoundingClientRect()
 
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
+      const dx = (width - prevSize.width) / 2
+      const dy = (height - prevSize.height) / 2
+      if (dx !== 0 || dy !== 0) {
+        setTranslate((t) => ({ x: t.x + dx, y: t.y + dy }))
+      }
+      prevSize.width = width
+      prevSize.height = height
       setContainerSize({ width, height })
     })
     ro.observe(container)
@@ -707,6 +728,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           minimap={
             <div
               ref={minimapWrapperRef}
+              className="rounded-lg border border-border"
               style={{ width: minimapSize, height: minimapSize }}
             >
               <StickerMinimap

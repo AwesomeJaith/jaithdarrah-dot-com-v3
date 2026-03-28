@@ -138,7 +138,7 @@ export function StickerMinimap({
 
   return (
     <div
-      className="h-full w-full rounded-lg border border-border bg-popover shadow-md"
+      className="h-full w-full rounded-lg bg-popover shadow-md"
       style={{
         cursor: isDragging ? "grabbing" : "pointer",
         touchAction: "none",
@@ -203,7 +203,6 @@ export function StickerMinimap({
             height={viewport.height}
             className="fill-foreground/5 stroke-foreground/50"
             strokeWidth={1}
-            rx={1}
             style={{ cursor: isDragging ? "grabbing" : "grab" }}
           />
         )}
