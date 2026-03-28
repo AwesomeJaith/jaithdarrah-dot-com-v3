@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
@@ -47,6 +48,19 @@ const PAN_THRESHOLD = 5 // px of movement before a pointerdown becomes a pan
 const EDGE_PAN_MARGIN = 50 // px from edge to trigger auto-pan
 const EDGE_PAN_MAX_SPEED = 5 // px per frame at the very edge
 
+const COMPACT_QUERY = `(max-width: ${COMPACT_BREAKPOINT}px)`
+function subscribeCompact(cb: () => void) {
+  const mql = window.matchMedia(COMPACT_QUERY)
+  mql.addEventListener("change", cb)
+  return () => mql.removeEventListener("change", cb)
+}
+function getCompactSnapshot() {
+  return window.matchMedia(COMPACT_QUERY).matches
+}
+function getCompactServerSnapshot() {
+  return false
+}
+
 function computeEdgePanDelta(
   screenX: number,
   screenY: number,
@@ -79,10 +93,21 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [translate, setTranslate] = useState({ x: 0, y: 0 })
   const [scale, _setScale] = useState(1)
   const scaleRef = useRef(1)
-  const setScale = useCallback((s: number) => {
-    scaleRef.current = s
-    _setScale(s)
-  }, [])
+  const setScale = useCallback(
+    (s: number | ((prev: number) => number)) => {
+      if (typeof s === "function") {
+        _setScale((prev) => {
+          const next = s(prev)
+          scaleRef.current = next
+          return next
+        })
+      } else {
+        scaleRef.current = s
+        _setScale(s)
+      }
+    },
+    []
+  )
 
   // Pan state
   const isPanningRef = useRef(false)
@@ -144,7 +169,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     translate: { x: number; y: number }
   } | null>(null)
   const pointersRef = useRef<Map<number, PointerEvent>>(new Map())
-  const initialSizeRef = useRef<{ width: number; height: number } | null>(null)
 
   // Convert screen coordinates to world coordinates
   const screenToWorld = useCallback(
@@ -411,14 +435,13 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     const { width, height } = container.getBoundingClientRect()
     setTranslate({ x: width / 2, y: height / 2 })
     setContainerSize({ width, height })
-    initialSizeRef.current = { width, height }
   }, [])
 
   // Keep origin centered when the container resizes after mount
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const prevSize = initialSizeRef.current ?? container.getBoundingClientRect()
+    const prevSize = container.getBoundingClientRect()
 
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
@@ -465,18 +488,11 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   }, [])
 
   // Responsive minimap positioning — based on window width, not container
-  const [isCompact, setIsCompact] = useState(() =>
-    typeof window !== "undefined"
-      ? window.innerWidth <= COMPACT_BREAKPOINT
-      : false
+  const isCompact = useSyncExternalStore(
+    subscribeCompact,
+    getCompactSnapshot,
+    getCompactServerSnapshot
   )
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${COMPACT_BREAKPOINT}px)`)
-    const handler = (e: MediaQueryListEvent) => setIsCompact(e.matches)
-    mql.addEventListener("change", handler)
-    return () => mql.removeEventListener("change", handler)
-  }, [])
   const minimapSize = isCompact ? MINIMAP_COMPACT_SIZE : MINIMAP_DEFAULT_SIZE
   const toolbarTop =
     isCompact || !containerSize
