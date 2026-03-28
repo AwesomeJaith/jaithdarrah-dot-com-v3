@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
-import { FaQuestion } from "react-icons/fa6"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { Button } from "@/components/ui/button"
 import { Sticker } from "./sticker"
+import { StickerInspector } from "./sticker-inspector"
 import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
 import { NotchedBorder, NOTCHED_CLIP_ID } from "./notched-border"
@@ -55,6 +55,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
     null
   )
+
+  // Inspect mode
+  const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(null)
 
   // Container size for minimap viewport calc
   const [containerSize, setContainerSize] = useState<{
@@ -410,7 +413,11 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
           {/* Placed stickers */}
           {stickers.map((sticker) => (
-            <Sticker key={sticker.id} sticker={sticker} />
+            <Sticker
+              key={sticker.id}
+              sticker={sticker}
+              onInspect={setInspectedSticker}
+            />
           ))}
 
           {/* Placement preview */}
@@ -437,35 +444,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Border with notch cutout — notchPad guarantees px of space between buttons and stroke */}
-      {containerSize && notchSize && (
-        <NotchedBorder
-          containerWidth={containerSize.width}
-          containerHeight={containerSize.height}
-          notchWidth={notchSize.width + NOTCH_PAD * 2}
-          notchHeight={notchSize.height + NOTCH_PAD}
-          cornerRadius={14}
-          notchRadius={14}
-        />
-      )}
-
-      {/* Bottom notch */}
-      <div
-        ref={notchBarRef}
-        className="absolute bottom-0 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1"
-      >
-        <Button
-          variant={isPlacing ? "outline" : "default"}
-          size="lg"
-          onClick={handlePlaceStickerClick}
-        >
-          {isPlacing ? "Cancel" : "Create a sticker"}
-        </Button>
-        <Button variant="outline" size="icon-lg" onClick={() => {}}>
-          ?
-        </Button>
       </div>
 
       {/* Toolbar (minimap + zoom controls) */}
@@ -497,6 +475,35 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         }
       />
 
+      {/* Border with notch cutout — notchPad guarantees px of space between buttons and stroke */}
+      {containerSize && notchSize && (
+        <NotchedBorder
+          containerWidth={containerSize.width}
+          containerHeight={containerSize.height}
+          notchWidth={notchSize.width + NOTCH_PAD * 2}
+          notchHeight={notchSize.height + NOTCH_PAD}
+          cornerRadius={14}
+          notchRadius={14}
+        />
+      )}
+
+      {/* Bottom notch */}
+      <div
+        ref={notchBarRef}
+        className="absolute bottom-0 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1"
+      >
+        <Button
+          variant={isPlacing ? "outline" : "default"}
+          size="lg"
+          onClick={handlePlaceStickerClick}
+        >
+          {isPlacing ? "Cancel" : "Create a sticker"}
+        </Button>
+        <Button variant="outline" size="icon-lg" onClick={() => {}}>
+          ?
+        </Button>
+      </div>
+
       {/* Placement hint */}
       {isPlacing && stickerPreviewUrl && (
         <div className="absolute top-4 left-1/2 z-40 -translate-x-1/2 rounded-lg border border-border bg-popover px-4 py-2 text-sm text-popover-foreground shadow-md">
@@ -512,6 +519,14 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             <p className="mt-1 text-sm">Be the first to place one.</p>
           </div>
         </div>
+      )}
+
+      {/* Sticker inspector */}
+      {inspectedSticker && (
+        <StickerInspector
+          sticker={inspectedSticker}
+          onClose={() => setInspectedSticker(null)}
+        />
       )}
 
       {/* Creator modal */}
