@@ -57,7 +57,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   )
 
   // Inspect mode
-  const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(null)
+  const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(
+    null
+  )
 
   // Container size for minimap viewport calc
   const [containerSize, setContainerSize] = useState<{
@@ -73,7 +75,13 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   } | null>(null)
 
   // Pinch state
-  const pinchRef = useRef<{ dist: number; scale: number } | null>(null)
+  const pinchRef = useRef<{
+    dist: number
+    scale: number
+    midX: number
+    midY: number
+    translate: { x: number; y: number }
+  } | null>(null)
   const pointersRef = useRef<Map<number, PointerEvent>>(new Map())
 
   // Convert screen coordinates to world coordinates
@@ -105,7 +113,19 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           pointers[0].clientX - pointers[1].clientX,
           pointers[0].clientY - pointers[1].clientY
         )
-        pinchRef.current = { dist, scale }
+        const container = containerRef.current
+        const rect = container?.getBoundingClientRect()
+        const midX =
+          (pointers[0].clientX + pointers[1].clientX) / 2 - (rect?.left ?? 0)
+        const midY =
+          (pointers[0].clientY + pointers[1].clientY) / 2 - (rect?.top ?? 0)
+        pinchRef.current = {
+          dist,
+          scale,
+          midX,
+          midY,
+          translate: { ...translate },
+        }
         isPanningRef.current = false
         return
       }
@@ -127,7 +147,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     (e: React.PointerEvent) => {
       pointersRef.current.set(e.pointerId, e.nativeEvent)
 
-      // Handle pinch zoom
+      // Handle pinch zoom + pan
       if (pointersRef.current.size === 2 && pinchRef.current) {
         const pointers = Array.from(pointersRef.current.values())
         const dist = Math.hypot(
@@ -141,6 +161,27 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             pinchRef.current.scale * (dist / pinchRef.current.dist)
           )
         )
+
+        const container = containerRef.current
+        const rect = container?.getBoundingClientRect()
+        const curMidX =
+          (pointers[0].clientX + pointers[1].clientX) / 2 - (rect?.left ?? 0)
+        const curMidY =
+          (pointers[0].clientY + pointers[1].clientY) / 2 - (rect?.top ?? 0)
+
+        // Keep the world point under the initial pinch center
+        // aligned with the current pinch center (zoom + pan)
+        const scaleChange = newScale / pinchRef.current.scale
+        setTranslate({
+          x:
+            curMidX -
+            (pinchRef.current.midX - pinchRef.current.translate.x) *
+              scaleChange,
+          y:
+            curMidY -
+            (pinchRef.current.midY - pinchRef.current.translate.y) *
+              scaleChange,
+        })
         setScale(newScale)
         return
       }
@@ -165,18 +206,26 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
+      const wasPinching = pinchRef.current !== null
+
       pointersRef.current.delete(e.pointerId)
       if (pointersRef.current.size < 2) {
         pinchRef.current = null
       }
 
-      // If in placement mode and we didn't pan, confirm placement
-      if (isPlacing && stickerPreviewUrl && !isPanningRef.current) {
+      // If in placement mode and we didn't pan or pinch, confirm placement
+      if (
+        isPlacing &&
+        stickerPreviewUrl &&
+        !isPanningRef.current &&
+        !wasPinching
+      ) {
         const world = screenToWorld(e.clientX, e.clientY)
         setPlacementPos({ x: world.x - 50, y: world.y - 50 })
         setShowCreator(true)
       }
 
+      // After a pinch, don't let the remaining finger start panning
       isPanningRef.current = false
     },
     [isPlacing, stickerPreviewUrl, screenToWorld]
