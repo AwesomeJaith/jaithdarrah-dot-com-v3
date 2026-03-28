@@ -27,7 +27,7 @@ export default function StickerWallPage() {
           anywhere on the wall.
         </p>
       </div>
-      <div className="relative min-h-125 flex-1">
+      <div className="relative min-h-100 flex-1">
         <div className="absolute inset-0">
           <Suspense
             fallback={
