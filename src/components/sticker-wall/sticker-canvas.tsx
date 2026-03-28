@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
+import { FaQuestion } from "react-icons/fa6"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { Button } from "@/components/ui/button"
 import { Sticker } from "./sticker"
 import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
+import { NotchedBorder, NOTCHED_CLIP_ID } from "./notched-border"
 
 const StickerCreator = dynamic(
   () =>
@@ -24,6 +26,7 @@ type StickerCanvasProps = {
 const MIN_SCALE = 0.1
 const MAX_SCALE = 3
 const ZOOM_STEP = 0.15
+const NOTCH_PAD = 6
 
 export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,6 +58,13 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
   // Container size for minimap viewport calc
   const [containerSize, setContainerSize] = useState<{
+    width: number
+    height: number
+  } | null>(null)
+
+  // Notch bar measurement
+  const notchBarRef = useRef<HTMLDivElement>(null)
+  const [notchSize, setNotchSize] = useState<{
     width: number
     height: number
   } | null>(null)
@@ -231,6 +241,21 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     return () => ro.disconnect()
   }, [])
 
+  // Track notch bar size
+  useEffect(() => {
+    const bar = notchBarRef.current
+    if (!bar) return
+    const rect = bar.getBoundingClientRect()
+    setNotchSize({ width: rect.width, height: rect.height })
+
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setNotchSize({ width, height })
+    })
+    ro.observe(bar)
+    return () => ro.disconnect()
+  }, [])
+
   // Navigate to a world position (from minimap click)
   const handleMinimapNavigate = useCallback(
     (worldX: number, worldY: number) => {
@@ -356,14 +381,18 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   }, [stickerBlob])
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl border border-border bg-muted/30">
+    <div className="relative h-full w-full rounded-xl bg-muted/30">
       {/* Canvas */}
       <div
         ref={containerRef}
-        className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
-        style={
-          isPlacing && stickerPreviewUrl ? { cursor: "crosshair" } : undefined
-        }
+        className="h-full w-full cursor-grab touch-none overflow-hidden rounded-xl active:cursor-grabbing"
+        style={{
+          ...(isPlacing && stickerPreviewUrl && { cursor: "crosshair" }),
+          ...(containerSize &&
+            notchSize && {
+              clipPath: `url(#${NOTCHED_CLIP_ID})`,
+            }),
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -410,6 +439,35 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         </div>
       </div>
 
+      {/* Border with notch cutout — notchPad guarantees px of space between buttons and stroke */}
+      {containerSize && notchSize && (
+        <NotchedBorder
+          containerWidth={containerSize.width}
+          containerHeight={containerSize.height}
+          notchWidth={notchSize.width + NOTCH_PAD * 2}
+          notchHeight={notchSize.height + NOTCH_PAD}
+          cornerRadius={14}
+          notchRadius={14}
+        />
+      )}
+
+      {/* Bottom notch */}
+      <div
+        ref={notchBarRef}
+        className="absolute bottom-0 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1"
+      >
+        <Button
+          variant={isPlacing ? "outline" : "default"}
+          size="lg"
+          onClick={handlePlaceStickerClick}
+        >
+          {isPlacing ? "Cancel" : "Create a sticker"}
+        </Button>
+        <Button variant="outline" size="icon-lg" onClick={() => {}}>
+          ?
+        </Button>
+      </div>
+
       {/* Toolbar (minimap + zoom controls) */}
       <StickerToolbar
         onZoomIn={() =>
@@ -438,18 +496,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           />
         }
       />
-
-      {/* Place a sticker button */}
-      <div className="absolute bottom-3 left-1/2 z-40 -translate-x-1/2">
-        <Button
-          variant={isPlacing ? "outline" : "default"}
-          size="lg"
-          onClick={handlePlaceStickerClick}
-          className="shadow-md"
-        >
-          {isPlacing ? "Cancel" : "Create a sticker"}
-        </Button>
-      </div>
 
       {/* Placement hint */}
       {isPlacing && stickerPreviewUrl && (
