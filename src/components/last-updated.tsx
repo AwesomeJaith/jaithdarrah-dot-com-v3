@@ -30,7 +30,7 @@ async function LastUpdated() {
       rel="noopener noreferrer"
       className="link-underline text-sm text-muted-foreground"
     >
-      Last updated {formatted}
+      Website last updated {formatted}
     </a>
   )
 }
