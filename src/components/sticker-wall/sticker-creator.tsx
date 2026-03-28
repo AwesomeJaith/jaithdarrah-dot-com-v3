@@ -26,17 +26,30 @@ type StickerCreatorProps = {
   placementRotation: number
 }
 
+let avifReady: Promise<void> | null = null
+let avifEncode: typeof import("@jsquash/avif/encode").default
+
+async function loadAvifEncoder() {
+  const mod = (await _cdn(
+    "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/encode.js/+esm"
+  )) as typeof import("@jsquash/avif/encode")
+  const wasmUrl =
+    "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/codec/enc/avif_enc.wasm"
+  const wasmModule = await WebAssembly.compileStreaming(fetch(wasmUrl))
+  await mod.init(wasmModule)
+  avifEncode = mod.default
+}
+
 async function convertToAvif(blob: Blob): Promise<Blob> {
-  const { encode } = (await _cdn(
-    "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/+esm"
-  )) as typeof import("@jsquash/avif")
+  if (!avifReady) avifReady = loadAvifEncoder()
+  await avifReady
   const bitmap = await createImageBitmap(blob)
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
   const ctx = canvas.getContext("2d")!
   ctx.drawImage(bitmap, 0, 0)
   bitmap.close()
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const avifBuffer = await encode(imageData, { quality: 50 })
+  const avifBuffer = await avifEncode(imageData, { quality: 50 })
   return new Blob([avifBuffer], { type: "image/avif" })
 }
 
