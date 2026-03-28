@@ -138,8 +138,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       isPanningRef.current = true
       panStartRef.current = { x: e.clientX, y: e.clientY }
       translateStartRef.current = { ...translate }
-      // Capture on the container so pointerup always fires here
-      containerRef.current?.setPointerCapture(e.pointerId)
     },
     [translate, scale, isPlacing, stickerPreviewUrl]
   )
@@ -195,6 +193,11 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
       // Handle pan
       if (!isPanningRef.current) return
+      // Capture on first move so pointerup always fires on the container,
+      // but not on pointerdown (which would steal events from sticker taps)
+      if (!containerRef.current?.hasPointerCapture(e.pointerId)) {
+        containerRef.current?.setPointerCapture(e.pointerId)
+      }
       const dx = e.clientX - panStartRef.current.x
       const dy = e.clientY - panStartRef.current.y
       setTranslate({
