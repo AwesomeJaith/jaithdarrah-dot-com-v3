@@ -14,7 +14,8 @@
       "Bash(whereis:*)",
       "Read",
       "Glob",
-      "Grep"
+      "Grep",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "enabledPlugins": {

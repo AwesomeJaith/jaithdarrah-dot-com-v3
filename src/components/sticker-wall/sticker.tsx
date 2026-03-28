@@ -8,9 +8,10 @@ import { StickerPopup } from "./sticker-popup"
 type StickerProps = {
   sticker: StickerType
   onInspect?: (sticker: StickerType) => void
+  disabled?: boolean
 }
 
-export function Sticker({ sticker, onInspect }: StickerProps) {
+export function Sticker({ sticker, onInspect, disabled }: StickerProps) {
   const [hovered, setHovered] = useState(false)
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
 
@@ -33,7 +34,7 @@ export function Sticker({ sticker, onInspect }: StickerProps) {
 
   return (
     <div
-      className="group absolute animate-pop-in select-none"
+      className={`group absolute animate-pop-in select-none${disabled ? " pointer-events-none" : ""}`}
       onDragStart={(e) => e.preventDefault()}
       style={{
         left: sticker.x,

@@ -485,6 +485,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
               key={sticker.id}
               sticker={sticker}
               onInspect={setInspectedSticker}
+              disabled={isPlacing && !!stickerPreviewUrl}
             />
           ))}
 
