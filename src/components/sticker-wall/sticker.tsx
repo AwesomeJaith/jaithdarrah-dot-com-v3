@@ -15,7 +15,6 @@ export function Sticker({ sticker, onInspect }: StickerProps) {
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (onInspect) e.stopPropagation()
     pointerDownPos.current = { x: e.clientX, y: e.clientY }
   }
 
@@ -26,7 +25,6 @@ export function Sticker({ sticker, onInspect }: StickerProps) {
     const dist = Math.sqrt(dx * dx + dy * dy)
     // Only treat as a click if the pointer barely moved (not a pan)
     if (dist < 5) {
-      e.stopPropagation()
       setHovered(false)
       onInspect(sticker)
     }
