@@ -28,6 +28,31 @@ const MAX_SCALE = 3
 const ZOOM_STEP = 0.15
 const NOTCH_PAD = 6
 const PAN_THRESHOLD = 5 // px of movement before a pointerdown becomes a pan
+const EDGE_PAN_MARGIN = 50 // px from edge to trigger auto-pan
+const EDGE_PAN_MAX_SPEED = 5 // px per frame at the very edge
+
+function computeEdgePanDelta(
+  screenX: number,
+  screenY: number,
+  rect: DOMRect,
+  margin: number,
+  maxSpeed: number
+): { dx: number; dy: number } {
+  let dx = 0,
+    dy = 0
+  const relX = screenX - rect.left
+  const relY = screenY - rect.top
+
+  if (relX < margin) dx = maxSpeed * (1 - relX / margin)
+  else if (relX > rect.width - margin)
+    dx = -maxSpeed * (1 - (rect.width - relX) / margin)
+
+  if (relY < margin) dy = maxSpeed * (1 - relY / margin)
+  else if (relY > rect.height - margin)
+    dy = -maxSpeed * (1 - (rect.height - relY) / margin)
+
+  return { dx, dy }
+}
 
 export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -43,6 +68,10 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const panPendingRef = useRef(false) // pointer is down but hasn't moved past threshold
   const panStartRef = useRef({ x: 0, y: 0 })
   const translateStartRef = useRef({ x: 0, y: 0 })
+
+  // Edge-pan state (refs to avoid stale closures in RAF)
+  const edgePanRafRef = useRef<number | null>(null)
+  const lastPointerScreenRef = useRef<{ x: number; y: number } | null>(null)
 
   // Placement mode state
   const [isPlacing, setIsPlacing] = useState(false)
@@ -192,6 +221,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
       // Update placement cursor position
       if (isPlacing && stickerPreviewUrl) {
+        lastPointerScreenRef.current = { x: e.clientX, y: e.clientY }
         const world = screenToWorld(e.clientX, e.clientY)
         setPlacementPos({ x: world.x - 50, y: world.y - 50 })
       }
@@ -292,6 +322,56 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     return () => container.removeEventListener("wheel", onWheel)
   }, [handleWheel])
 
+  // Edge-pan: auto-scroll when cursor is near canvas edge during placement
+  useEffect(() => {
+    if (!(isPlacing && stickerPreviewUrl)) {
+      if (edgePanRafRef.current !== null) {
+        cancelAnimationFrame(edgePanRafRef.current)
+        edgePanRafRef.current = null
+      }
+      return
+    }
+
+    const tick = () => {
+      const container = containerRef.current
+      const pointer = lastPointerScreenRef.current
+      if (!container || !pointer) {
+        edgePanRafRef.current = requestAnimationFrame(tick)
+        return
+      }
+
+      const rect = container.getBoundingClientRect()
+      const { dx, dy } = computeEdgePanDelta(
+        pointer.x,
+        pointer.y,
+        rect,
+        EDGE_PAN_MARGIN,
+        EDGE_PAN_MAX_SPEED
+      )
+
+      if (dx !== 0 || dy !== 0) {
+        setTranslate((prev) => {
+          const next = { x: prev.x + dx, y: prev.y + dy }
+          const worldX = (pointer.x - rect.left - next.x) / scale
+          const worldY = (pointer.y - rect.top - next.y) / scale
+          setPlacementPos({ x: worldX - 50, y: worldY - 50 })
+          return next
+        })
+      }
+
+      edgePanRafRef.current = requestAnimationFrame(tick)
+    }
+
+    edgePanRafRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      if (edgePanRafRef.current !== null) {
+        cancelAnimationFrame(edgePanRafRef.current)
+        edgePanRafRef.current = null
+      }
+    }
+  }, [isPlacing, stickerPreviewUrl, scale])
+
   // Center the origin on mount + track container size
   useEffect(() => {
     const container = containerRef.current
@@ -385,6 +465,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       setPlacementPos(null)
       setPlacementRotation(0)
       setStickerBlob(null)
+      lastPointerScreenRef.current = null
       if (stickerPreviewUrl) {
         URL.revokeObjectURL(stickerPreviewUrl)
         setStickerPreviewUrl(null)
@@ -431,6 +512,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       setPlacementRotation(0)
       setStickerBlob(null)
       setBlurDataUrl(null)
+      lastPointerScreenRef.current = null
       if (stickerPreviewUrl) {
         URL.revokeObjectURL(stickerPreviewUrl)
         setStickerPreviewUrl(null)
