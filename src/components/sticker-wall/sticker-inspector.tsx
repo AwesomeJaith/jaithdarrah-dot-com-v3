@@ -160,11 +160,19 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               placeholder={sticker.blur_data_url ? "blur" : "empty"}
               blurDataURL={sticker.blur_data_url ?? undefined}
             />
-            {/* Gloss overlay */}
+            {/* Gloss overlay — masked to sticker shape */}
             <motion.div
               className="pointer-events-none absolute inset-0 rounded-sm opacity-25"
               style={{
                 background: glossGradient,
+                maskImage: `url(${sticker.image_url})`,
+                maskSize: "contain",
+                maskRepeat: "no-repeat",
+                maskPosition: "center",
+                WebkitMaskImage: `url(${sticker.image_url})`,
+                WebkitMaskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
               }}
             />
           </motion.div>
