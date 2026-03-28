@@ -27,6 +27,7 @@ const MIN_SCALE = 0.1
 const MAX_SCALE = 3
 const ZOOM_STEP = 0.15
 const NOTCH_PAD = 6
+const PAN_THRESHOLD = 5 // px of movement before a pointerdown becomes a pan
 
 export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -39,6 +40,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
   // Pan state
   const isPanningRef = useRef(false)
+  const panPendingRef = useRef(false) // pointer is down but hasn't moved past threshold
   const panStartRef = useRef({ x: 0, y: 0 })
   const translateStartRef = useRef({ x: 0, y: 0 })
 
@@ -135,7 +137,10 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         return
       }
 
-      isPanningRef.current = true
+      // Don't start panning yet — wait for movement past threshold
+      // so taps on stickers still work
+      panPendingRef.current = true
+      isPanningRef.current = false
       panStartRef.current = { x: e.clientX, y: e.clientY }
       translateStartRef.current = { ...translate }
     },
@@ -192,14 +197,19 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       }
 
       // Handle pan
-      if (!isPanningRef.current) return
-      // Capture on first move so pointerup always fires on the container,
-      // but not on pointerdown (which would steal events from sticker taps)
-      if (!containerRef.current?.hasPointerCapture(e.pointerId)) {
-        containerRef.current?.setPointerCapture(e.pointerId)
-      }
       const dx = e.clientX - panStartRef.current.x
       const dy = e.clientY - panStartRef.current.y
+
+      // Promote pending → panning once past threshold
+      if (panPendingRef.current && !isPanningRef.current) {
+        if (Math.abs(dx) + Math.abs(dy) < PAN_THRESHOLD) return
+        isPanningRef.current = true
+        panPendingRef.current = false
+        // Capture so pointerup fires on the container even if pointer leaves
+        containerRef.current?.setPointerCapture(e.pointerId)
+      }
+
+      if (!isPanningRef.current) return
       setTranslate({
         x: translateStartRef.current.x + dx,
         y: translateStartRef.current.y + dy,
@@ -229,8 +239,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         setShowCreator(true)
       }
 
-      // After a pinch, don't let the remaining finger start panning
+      // Reset pan state
       isPanningRef.current = false
+      panPendingRef.current = false
     },
     [isPlacing, stickerPreviewUrl, screenToWorld]
   )
