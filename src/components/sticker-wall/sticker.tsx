@@ -1,12 +1,35 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { StickerPopup } from "./sticker-popup"
 
-export function Sticker({ sticker }: { sticker: StickerType }) {
+type StickerProps = {
+  sticker: StickerType
+  onInspect?: (sticker: StickerType) => void
+}
+
+export function Sticker({ sticker, onInspect }: StickerProps) {
   const [hovered, setHovered] = useState(false)
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pointerDownPos.current = { x: e.clientX, y: e.clientY }
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!pointerDownPos.current || !onInspect) return
+    const dx = e.clientX - pointerDownPos.current.x
+    const dy = e.clientY - pointerDownPos.current.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    // Only treat as a click if the pointer barely moved (not a pan)
+    if (dist < 5) {
+      e.stopPropagation()
+      onInspect(sticker)
+    }
+    pointerDownPos.current = null
+  }
 
   return (
     <div
@@ -18,14 +41,17 @@ export function Sticker({ sticker }: { sticker: StickerType }) {
         height: sticker.height,
         transform: `rotate(${sticker.rotation}deg)`,
         zIndex: hovered ? 2147483647 : undefined,
+        cursor: onInspect ? "pointer" : undefined,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       tabIndex={0}
       role="button"
-      aria-label={`Sticker by ${sticker.username}${sticker.message ? `: ${sticker.message}` : ""}`}
+      aria-label={`Sticker by ${sticker.username}${sticker.message ? `: ${sticker.message}` : ""}. Click to inspect.`}
     >
       {hovered && <StickerPopup sticker={sticker} />}
       <Image

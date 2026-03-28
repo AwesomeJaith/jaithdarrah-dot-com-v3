@@ -6,6 +6,7 @@ import Image from "next/image"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { Button } from "@/components/ui/button"
 import { Sticker } from "./sticker"
+import { StickerInspector } from "./sticker-inspector"
 import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
 
@@ -52,6 +53,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
     null
   )
+
+  // Inspect mode
+  const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(null)
 
   // Container size for minimap viewport calc
   const [containerSize, setContainerSize] = useState<{
@@ -381,7 +385,11 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
           {/* Placed stickers */}
           {stickers.map((sticker) => (
-            <Sticker key={sticker.id} sticker={sticker} />
+            <Sticker
+              key={sticker.id}
+              sticker={sticker}
+              onInspect={setInspectedSticker}
+            />
           ))}
 
           {/* Placement preview */}
@@ -466,6 +474,14 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             <p className="mt-1 text-sm">Be the first to place one.</p>
           </div>
         </div>
+      )}
+
+      {/* Sticker inspector */}
+      {inspectedSticker && (
+        <StickerInspector
+          sticker={inspectedSticker}
+          onClose={() => setInspectedSticker(null)}
+        />
       )}
 
       {/* Creator modal */}
