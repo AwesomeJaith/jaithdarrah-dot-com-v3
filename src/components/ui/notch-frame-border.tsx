@@ -1,16 +1,17 @@
 import { memo, useMemo } from "react"
 
-export const NOTCHED_CLIP_ID = "notched-clip"
-
 const K = 0.5523 // Bezier tangent for quarter-circle approximation
 
-type NotchedBorderProps = {
+type NotchFrameBorderProps = {
+  clipId: string
   containerWidth: number
   containerHeight: number
   notchWidth: number
   notchHeight: number
   cornerRadius?: number
   notchRadius?: number
+  borderClassName?: string
+  fillClassName?: string
 }
 
 function computeGeometry(
@@ -47,11 +48,42 @@ function computeGeometry(
 
   const f = (n: number) => Math.round(n * 100) / 100
 
-  return { i, L, T, R, B, r, outerR, notchLeft, notchRight, notchTop, nr2, ok, outerOk, nk, f }
+  return {
+    i,
+    L,
+    T,
+    R,
+    B,
+    r,
+    outerR,
+    notchLeft,
+    notchRight,
+    notchTop,
+    nr2,
+    ok,
+    outerOk,
+    nk,
+    f,
+  }
 }
 
 function buildNotchedPath(geo: ReturnType<typeof computeGeometry>): string {
-  const { L, T, R, B, r, outerR, notchLeft, notchRight, notchTop, nr2, ok, outerOk, nk, f } = geo
+  const {
+    L,
+    T,
+    R,
+    B,
+    r,
+    outerR,
+    notchLeft,
+    notchRight,
+    notchTop,
+    nr2,
+    ok,
+    outerOk,
+    nk,
+    f,
+  } = geo
 
   return [
     `M ${f(L + r)},${T}`,
@@ -76,7 +108,8 @@ function buildNotchedPath(geo: ReturnType<typeof computeGeometry>): string {
 }
 
 function buildNotchFill(geo: ReturnType<typeof computeGeometry>): string {
-  const { B, outerR, notchLeft, notchRight, notchTop, nr2, outerOk, nk, f } = geo
+  const { B, outerR, notchLeft, notchRight, notchTop, nr2, outerOk, nk, f } =
+    geo
 
   return [
     `M ${f(notchLeft - outerR)},${B}`,
@@ -92,14 +125,17 @@ function buildNotchFill(geo: ReturnType<typeof computeGeometry>): string {
   ].join(" ")
 }
 
-export const NotchedBorder = memo(function NotchedBorder({
+export const NotchFrameBorder = memo(function NotchFrameBorder({
+  clipId,
   containerWidth,
   containerHeight,
   notchWidth,
   notchHeight,
   cornerRadius = 14,
   notchRadius = 12,
-}: NotchedBorderProps) {
+  borderClassName = "fill-none stroke-sticker-border stroke-1",
+  fillClassName = "fill-background stroke-background",
+}: NotchFrameBorderProps) {
   const { d, notchFill } = useMemo(() => {
     const geo = computeGeometry(
       containerWidth,
@@ -132,12 +168,12 @@ export const NotchedBorder = memo(function NotchedBorder({
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <clipPath id={NOTCHED_CLIP_ID}>
+        <clipPath id={clipId}>
           <path d={d} />
         </clipPath>
       </defs>
-      <path d={notchFill} className="fill-background stroke-background" />
-      <path d={d} className="fill-none stroke-sticker-border stroke-1" />
+      <path d={notchFill} className={fillClassName} />
+      <path d={d} className={borderClassName} />
     </svg>
   )
 })

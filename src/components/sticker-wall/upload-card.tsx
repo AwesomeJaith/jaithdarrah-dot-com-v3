@@ -100,7 +100,6 @@ export function UploadCard({
   }
 
   return (
-    <div className="absolute bottom-0 left-1/2 z-40 -translate-x-1/2">
       <motion.div
         ref={notchRootRef}
         className="relative overflow-hidden"
@@ -397,6 +396,5 @@ export function UploadCard({
           </motion.div>
         </motion.div>
       </motion.div>
-    </div>
   )
 }
