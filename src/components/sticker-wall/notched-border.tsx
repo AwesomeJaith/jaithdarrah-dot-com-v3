@@ -46,8 +46,7 @@ function computeGeometry(
 }
 
 function buildNotchedPath(geo: ReturnType<typeof computeGeometry>): string {
-  const { L, T, R, B, r, notchLeft, notchRight, notchTop, nr2, ok, nk, f } =
-    geo
+  const { L, T, R, B, r, notchLeft, notchRight, notchTop, nr2, ok, nk, f } = geo
 
   return [
     `M ${f(L + r)},${T}`,
@@ -109,7 +108,14 @@ export const NotchedBorder = memo(function NotchedBorder({
       d: buildNotchedPath(geo),
       notchFill: buildNotchFill(geo),
     }
-  }, [containerWidth, containerHeight, notchWidth, notchHeight, cornerRadius, notchRadius])
+  }, [
+    containerWidth,
+    containerHeight,
+    notchWidth,
+    notchHeight,
+    cornerRadius,
+    notchRadius,
+  ])
 
   return (
     <svg
@@ -125,8 +131,8 @@ export const NotchedBorder = memo(function NotchedBorder({
           <path d={d} />
         </clipPath>
       </defs>
-      <path d={notchFill} fill="var(--background)" />
-      <path d={d} stroke="var(--border)" strokeWidth="1" fill="none" />
+      <path d={notchFill} className="fill-background stroke-background" />
+      <path d={d} className="fill-none stroke-sticker-border stroke-1" />
     </svg>
   )
 })

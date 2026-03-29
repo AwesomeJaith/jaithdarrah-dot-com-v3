@@ -22,7 +22,10 @@ export function StickerToolbar({
   return (
     <div className="flex flex-col gap-1.5">
       {minimap}
-      <div ref={zoomRowRef} className="flex gap-1 rounded-lg border border-border bg-popover p-1 shadow-md">
+      <div
+        ref={zoomRowRef}
+        className="flex gap-1 rounded-lg border border-sticker-border bg-sticker-panel p-1 shadow-md"
+      >
         <Button
           variant="ghost"
           size="icon-sm"

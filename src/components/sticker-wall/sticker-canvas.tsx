@@ -93,21 +93,18 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [translate, setTranslate] = useState({ x: 0, y: 0 })
   const [scale, _setScale] = useState(1)
   const scaleRef = useRef(1)
-  const setScale = useCallback(
-    (s: number | ((prev: number) => number)) => {
-      if (typeof s === "function") {
-        _setScale((prev) => {
-          const next = s(prev)
-          scaleRef.current = next
-          return next
-        })
-      } else {
-        scaleRef.current = s
-        _setScale(s)
-      }
-    },
-    []
-  )
+  const setScale = useCallback((s: number | ((prev: number) => number)) => {
+    if (typeof s === "function") {
+      _setScale((prev) => {
+        const next = s(prev)
+        scaleRef.current = next
+        return next
+      })
+    } else {
+      scaleRef.current = s
+      _setScale(s)
+    }
+  }, [])
 
   // Pan state
   const isPanningRef = useRef(false)
@@ -300,7 +297,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         y: translateStartRef.current.y + dy,
       })
     },
-    [isPlacing, stickerPreviewUrl, screenToWorld]
+    [isPlacing, stickerPreviewUrl, screenToWorld, setScale]
   )
 
   const handlePointerUp = useCallback(
@@ -656,7 +653,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   }, [stickerBlob])
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl bg-muted/30">
+    <div className="relative h-full w-full overflow-hidden rounded-xl bg-sticker-canvas">
       {/* Canvas */}
       <div
         ref={containerRef}
@@ -781,7 +778,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         />
       )}
 
-      {/* Bottom notch */}
+      {/* Notch controls */}
       <div
         ref={notchBarRef}
         className="absolute bottom-0 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1"
@@ -800,7 +797,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
       {/* Placement hint */}
       {isPlacing && stickerPreviewUrl && (
-        <div className="absolute top-4 left-1/2 z-40 -translate-x-1/2 rounded-lg border border-border bg-popover px-4 py-2 text-sm text-popover-foreground shadow-md">
+        <div className="absolute top-4 left-1/2 z-40 -translate-x-1/2 rounded-lg border border-sticker-border bg-sticker-panel px-4 py-2 text-sm text-popover-foreground shadow-md">
           Click to place your sticker. Scroll to rotate.
         </div>
       )}

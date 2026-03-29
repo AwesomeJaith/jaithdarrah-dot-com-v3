@@ -155,7 +155,7 @@ export function StickerMinimap({
 
   return (
     <div
-      className="h-full w-full rounded-lg bg-popover shadow-md"
+      className="h-full w-full rounded-lg border border-sticker-border bg-sticker-panel shadow-md"
       style={{
         cursor: isDragging ? "grabbing" : "pointer",
         touchAction: "none",
@@ -164,7 +164,6 @@ export function StickerMinimap({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      aria-label="Mini map"
     >
       <svg
         viewBox={`0 0 ${minimapSize} ${minimapSize}`}
