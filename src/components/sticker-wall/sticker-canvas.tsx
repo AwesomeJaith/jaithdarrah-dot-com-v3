@@ -355,7 +355,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         notchPad={NOTCH_PAD}
         showUpload={upload.showUpload}
         showHelp={upload.showHelp}
+        showPlace={upload.showPlace}
         uploadProcessing={upload.uploadProcessing}
+        uploadProgress={upload.uploadProgress}
         uploadError={upload.uploadError}
         uploadDragOver={upload.uploadDragOver}
         setUploadDragOver={upload.setUploadDragOver}
@@ -365,6 +367,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         handleCardClose={upload.handleCardClose}
         handleUploadFile={upload.handleUploadFile}
         handlePlaceStickerClick={handlePlaceStickerClick}
+        handlePlaceConfirm={upload.handlePlaceConfirm}
         handleHelpOpen={upload.openHelpCard}
       />
 

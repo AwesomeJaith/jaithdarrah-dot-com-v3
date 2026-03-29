@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { FaUpload } from "react-icons/fa6"
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,9 @@ type UploadCardProps = {
   notchPad: number
   showUpload: boolean
   showHelp: boolean
+  showPlace: boolean
   uploadProcessing: boolean
+  uploadProgress: number
   uploadError: string | null
   uploadDragOver: boolean
   setUploadDragOver: (v: boolean) => void
@@ -26,7 +29,31 @@ type UploadCardProps = {
   handleCardClose: () => void
   handleUploadFile: (file: File) => void
   handlePlaceStickerClick: () => void
+  handlePlaceConfirm: () => void
   handleHelpOpen: () => void
+}
+
+function CloseButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-muted-foreground hover:text-foreground"
+      aria-label="Close"
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    </button>
+  )
 }
 
 export function UploadCard({
@@ -35,7 +62,9 @@ export function UploadCard({
   notchPad,
   showUpload,
   showHelp,
+  showPlace,
   uploadProcessing,
+  uploadProgress,
   uploadError,
   uploadDragOver,
   setUploadDragOver,
@@ -45,11 +74,30 @@ export function UploadCard({
   handleCardClose,
   handleUploadFile,
   handlePlaceStickerClick,
+  handlePlaceConfirm,
   handleHelpOpen,
 }: UploadCardProps) {
   const cardWidth = isCompact ? CARD_WIDTH_COMPACT : CARD_WIDTH
   const cardHeight = isCompact ? CARD_HEIGHT_COMPACT : CARD_HEIGHT
-  const isExpanded = showUpload || showHelp
+  const isExpanded = showUpload || showHelp || showPlace
+
+  // Measure spacer to get an explicit collapsed width so the spring can
+  // interpolate between Cancel-width and Create+Help-width.
+  const [collapsedWidth, setCollapsedWidth] = useState<number | null>(null)
+  useEffect(() => {
+    const el = notchBarRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setCollapsedWidth(el.offsetWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [notchBarRef])
+
+  const springTransition = {
+    type: "spring" as const,
+    stiffness: 550 / MORPH_SPEED,
+    damping: 45,
+    mass: 0.7,
+  }
 
   return (
     <div className="absolute bottom-0 left-1/2 z-40 -translate-x-1/2">
@@ -58,7 +106,7 @@ export function UploadCard({
         className="relative overflow-hidden"
         initial={false}
         animate={{
-          width: isExpanded ? cardWidth : "auto",
+          width: isExpanded ? cardWidth : (collapsedWidth ?? "auto"),
           height: isExpanded ? cardHeight : "auto",
           borderRadius: isExpanded ? 14 - notchPad : 8,
           backgroundColor: isExpanded
@@ -68,21 +116,15 @@ export function UploadCard({
             ? "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
             : "none",
         }}
-        transition={{
-          type: "spring",
-          stiffness: 550 / MORPH_SPEED,
-          damping: 45,
-          mass: 0.7,
-        }}
+        transition={springTransition}
       >
-        {/* Upload card content — full size, anchored to bottom so it reveals from bottom up */}
+        {/* Upload card content */}
         <div
           className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
           style={{
             width: cardWidth,
             height: cardHeight,
             pointerEvents: showUpload ? "all" : "none",
-            visibility: showUpload ? "visible" : "hidden",
             zIndex: showUpload ? 1 : 0,
           }}
         >
@@ -100,24 +142,7 @@ export function UploadCard({
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-medium">Create your sticker</h2>
-                  <button
-                    onClick={handleCardClose}
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Close"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
+                  <CloseButton onClick={handleCardClose} />
                 </div>
 
                 <div
@@ -126,23 +151,42 @@ export function UploadCard({
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-muted-foreground"
                   }`}
-                  onClick={() => uploadFileInputRef.current?.click()}
+                  onClick={() =>
+                    !uploadProcessing && uploadFileInputRef.current?.click()
+                  }
                   onDragOver={(e) => {
                     e.preventDefault()
-                    setUploadDragOver(true)
+                    if (!uploadProcessing) setUploadDragOver(true)
                   }}
                   onDragLeave={() => setUploadDragOver(false)}
                   onDrop={(e) => {
                     e.preventDefault()
                     setUploadDragOver(false)
+                    if (uploadProcessing) return
                     const file = e.dataTransfer.files[0]
                     if (file) handleUploadFile(file)
                   }}
                 >
                   {uploadProcessing ? (
-                    <p className="text-sm text-muted-foreground">
-                      Processing...
-                    </p>
+                    <div className="flex w-full flex-col items-center justify-center gap-2 px-6">
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                        <motion.div
+                          className="h-full rounded-full bg-primary"
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${Math.round(uploadProgress * 100)}%`,
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 30,
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {Math.round(uploadProgress * 100)}%
+                      </p>
+                    </div>
                   ) : (
                     <>
                       <FaUpload className="size-5 text-muted-foreground" />
@@ -175,14 +219,13 @@ export function UploadCard({
           </AnimatePresence>
         </div>
 
-        {/* Help card content — full size, anchored to bottom so it reveals from bottom up */}
+        {/* Help card content */}
         <div
           className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
           style={{
             width: cardWidth,
             height: cardHeight,
             pointerEvents: showHelp ? "all" : "none",
-            visibility: showHelp ? "visible" : "hidden",
             zIndex: showHelp ? 1 : 0,
           }}
         >
@@ -200,24 +243,7 @@ export function UploadCard({
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-medium">How it works</h2>
-                  <button
-                    onClick={handleCardClose}
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Close"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
+                  <CloseButton onClick={handleCardClose} />
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 rounded-lg bg-muted p-3">
@@ -234,8 +260,51 @@ export function UploadCard({
           </AnimatePresence>
         </div>
 
-        {/* Invisible spacer — in flow to give the container its collapsed height */}
-        <div ref={notchBarRef} className="invisible flex items-center gap-1">
+        {/* Place sticker card content */}
+        <div
+          className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
+          style={{
+            width: cardWidth,
+            height: cardHeight,
+            pointerEvents: showPlace ? "all" : "none",
+            zIndex: showPlace ? 1 : 0,
+          }}
+        >
+          <AnimatePresence>
+            {showPlace && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{
+                  duration: 0.15 * MORPH_SPEED,
+                  delay: showPlace ? 0.1 * MORPH_SPEED : 0,
+                }}
+                className="flex h-full flex-col gap-3"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium">Ready!</h2>
+                  <CloseButton onClick={handleCardClose} />
+                </div>
+
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-muted p-3">
+                  <p className="text-sm text-muted-foreground">
+                    Your sticker is ready to place on the canvas.
+                  </p>
+                  <Button size="lg" onClick={handlePlaceConfirm}>
+                    Place sticker
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Invisible spacer — mirrors visible buttons so notch fits snugly */}
+        <div
+          ref={notchBarRef}
+          className="invisible flex w-fit items-center gap-1"
+        >
           <Button size="lg" tabIndex={-1} aria-hidden>
             {isPlacing ? "Cancel" : "Create a sticker"}
           </Button>
@@ -246,35 +315,86 @@ export function UploadCard({
           )}
         </div>
 
-        {/* Button row — pinned to bottom center, fades out/in */}
+        {/* Outer wrapper — handles card expand/collapse fade (original timing) */}
         <motion.div
-          className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center justify-center gap-1"
+          className="absolute bottom-0 left-1/2 -translate-x-1/2"
+          initial={false}
           animate={{ opacity: isExpanded ? 0 : 1 }}
           transition={{
             duration: 0.1 * MORPH_SPEED,
             delay: isExpanded ? 0 : 0.15 * MORPH_SPEED,
           }}
+          style={{ pointerEvents: isExpanded ? "none" : "auto" }}
         >
-          <Button
-            variant={isPlacing ? "outline" : "default"}
-            size="lg"
-            onClick={handlePlaceStickerClick}
-            style={{ pointerEvents: isExpanded ? "none" : "auto" }}
-            className="text-center transition-all duration-150 active:scale-98"
+          {/* Cancel button (placing) — shell appears instantly for clip reveal */}
+          <motion.div
+            className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center justify-center gap-1"
+            initial={false}
+            animate={{ opacity: isPlacing ? 1 : 0 }}
+            transition={{ duration: 0.05 * MORPH_SPEED, delay: 0 }}
+            style={{ pointerEvents: isPlacing ? "auto" : "none" }}
           >
-            {isPlacing ? "Cancel" : "Create a sticker"}
-          </Button>
-          {!isPlacing && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handlePlaceStickerClick}
+              className="text-center transition-all duration-150 active:scale-98"
+            >
+              <motion.span
+                initial={false}
+                animate={{ opacity: isPlacing ? 1 : 0 }}
+                transition={{
+                  duration: 0.1 * MORPH_SPEED,
+                  delay: isPlacing ? 0.15 * MORPH_SPEED : 0,
+                }}
+              >
+                Cancel
+              </motion.span>
+            </Button>
+          </motion.div>
+
+          {/* Create + Help buttons (not placing) — shells appear instantly for clip reveal */}
+          <motion.div
+            className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center justify-center gap-1"
+            initial={false}
+            animate={{ opacity: !isPlacing ? 1 : 0 }}
+            transition={{ duration: 0.05 * MORPH_SPEED, delay: 0 }}
+            style={{ pointerEvents: !isPlacing ? "auto" : "none" }}
+          >
+            <Button
+              size="lg"
+              onClick={handlePlaceStickerClick}
+              className="text-center transition-all duration-150 active:scale-98"
+            >
+              <motion.span
+                initial={false}
+                animate={{ opacity: !isPlacing ? 1 : 0 }}
+                transition={{
+                  duration: 0.1 * MORPH_SPEED,
+                  delay: !isPlacing ? 0.15 * MORPH_SPEED : 0,
+                }}
+              >
+                Create a sticker
+              </motion.span>
+            </Button>
             <Button
               variant="outline"
               size="icon-lg"
               onClick={handleHelpOpen}
-              style={{ pointerEvents: isExpanded ? "none" : "auto" }}
               className="text-center transition-all duration-150 active:scale-98"
             >
-              ?
+              <motion.span
+                initial={false}
+                animate={{ opacity: !isPlacing ? 1 : 0 }}
+                transition={{
+                  duration: 0.1 * MORPH_SPEED,
+                  delay: !isPlacing ? 0.15 * MORPH_SPEED : 0,
+                }}
+              >
+                ?
+              </motion.span>
             </Button>
-          )}
+          </motion.div>
         </motion.div>
       </motion.div>
     </div>
