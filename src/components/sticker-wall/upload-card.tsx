@@ -5,9 +5,15 @@ import { FaUpload } from "react-icons/fa6"
 import { Button } from "@/components/ui/button"
 
 const MORPH_SPEED = 1
+export const CARD_WIDTH = 320
+const CARD_HEIGHT = 220
+export const CARD_WIDTH_COMPACT = 260
+const CARD_HEIGHT_COMPACT = 200
 
 type UploadCardProps = {
   isPlacing: boolean
+  isCompact: boolean
+  notchPad: number
   showUpload: boolean
   uploadProcessing: boolean
   uploadError: string | null
@@ -23,6 +29,8 @@ type UploadCardProps = {
 
 export function UploadCard({
   isPlacing,
+  isCompact,
+  notchPad,
   showUpload,
   uploadProcessing,
   uploadError,
@@ -35,6 +43,9 @@ export function UploadCard({
   handleUploadFile,
   handlePlaceStickerClick,
 }: UploadCardProps) {
+  const cardWidth = isCompact ? CARD_WIDTH_COMPACT : CARD_WIDTH
+  const cardHeight = isCompact ? CARD_HEIGHT_COMPACT : CARD_HEIGHT
+
   return (
     <div className="absolute bottom-0 left-1/2 z-40 -translate-x-1/2">
       <motion.div
@@ -42,9 +53,9 @@ export function UploadCard({
         className="relative overflow-hidden"
         initial={false}
         animate={{
-          width: showUpload ? 320 : "auto",
-          height: showUpload ? 220 : "auto",
-          borderRadius: showUpload ? 14 : 8,
+          width: showUpload ? cardWidth : "auto",
+          height: showUpload ? cardHeight : "auto",
+          borderRadius: showUpload ? 14 - notchPad : 8,
           backgroundColor: showUpload
             ? "var(--color-popover)"
             : "oklch(0% 0 0 / 0)",
@@ -63,8 +74,8 @@ export function UploadCard({
         <div
           className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
           style={{
-            width: 320,
-            height: 220,
+            width: cardWidth,
+            height: cardHeight,
             pointerEvents: showUpload ? "all" : "none",
             visibility: showUpload ? "visible" : "hidden",
           }}

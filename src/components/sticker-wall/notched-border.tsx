@@ -37,33 +37,38 @@ function computeGeometry(
   const maxNr = Math.min(nh / 2, nw / 4, r)
   const nr2 = Math.min(nr, maxNr)
 
+  // Clamp bottom-edge radius so notch outer corners never overlap container corners
+  const minSpace = Math.min(notchLeft - L, R - notchRight)
+  const outerR = Math.min(r, Math.max(0, minSpace / 2))
+
   const ok = r * K
+  const outerOk = outerR * K
   const nk = nr2 * K
 
   const f = (n: number) => Math.round(n * 100) / 100
 
-  return { i, L, T, R, B, r, notchLeft, notchRight, notchTop, nr2, ok, nk, f }
+  return { i, L, T, R, B, r, outerR, notchLeft, notchRight, notchTop, nr2, ok, outerOk, nk, f }
 }
 
 function buildNotchedPath(geo: ReturnType<typeof computeGeometry>): string {
-  const { L, T, R, B, r, notchLeft, notchRight, notchTop, nr2, ok, nk, f } = geo
+  const { L, T, R, B, r, outerR, notchLeft, notchRight, notchTop, nr2, ok, outerOk, nk, f } = geo
 
   return [
     `M ${f(L + r)},${T}`,
     `L ${f(R - r)},${T}`,
     `C ${f(R - r + ok)},${T} ${R},${f(T + r - ok)} ${R},${f(T + r)}`,
-    `L ${R},${f(B - r)}`,
-    `C ${R},${f(B - r + ok)} ${f(R - r + ok)},${B} ${f(R - r)},${B}`,
-    `L ${f(notchRight + r)},${B}`,
-    `C ${f(notchRight + r - ok)},${B} ${notchRight},${f(B - r + ok)} ${notchRight},${f(B - r)}`,
+    `L ${R},${f(B - outerR)}`,
+    `C ${R},${f(B - outerR + outerOk)} ${f(R - outerR + outerOk)},${B} ${f(R - outerR)},${B}`,
+    `L ${f(notchRight + outerR)},${B}`,
+    `C ${f(notchRight + outerR - outerOk)},${B} ${notchRight},${f(B - outerR + outerOk)} ${notchRight},${f(B - outerR)}`,
     `L ${notchRight},${f(notchTop + nr2)}`,
     `C ${notchRight},${f(notchTop + nr2 - nk)} ${f(notchRight - nr2 + nk)},${notchTop} ${f(notchRight - nr2)},${notchTop}`,
     `L ${f(notchLeft + nr2)},${notchTop}`,
     `C ${f(notchLeft + nr2 - nk)},${notchTop} ${notchLeft},${f(notchTop + nr2 - nk)} ${notchLeft},${f(notchTop + nr2)}`,
-    `L ${notchLeft},${f(B - r)}`,
-    `C ${notchLeft},${f(B - r + ok)} ${f(notchLeft - r + ok)},${B} ${f(notchLeft - r)},${B}`,
-    `L ${f(L + r)},${B}`,
-    `C ${f(L + r - ok)},${B} ${L},${f(B - r + ok)} ${L},${f(B - r)}`,
+    `L ${notchLeft},${f(B - outerR)}`,
+    `C ${notchLeft},${f(B - outerR + outerOk)} ${f(notchLeft - outerR + outerOk)},${B} ${f(notchLeft - outerR)},${B}`,
+    `L ${f(L + outerR)},${B}`,
+    `C ${f(L + outerR - outerOk)},${B} ${L},${f(B - outerR + outerOk)} ${L},${f(B - outerR)}`,
     `L ${L},${f(T + r)}`,
     `C ${L},${f(T + r - ok)} ${f(L + r - ok)},${T} ${f(L + r)},${T}`,
     `Z`,
@@ -71,18 +76,18 @@ function buildNotchedPath(geo: ReturnType<typeof computeGeometry>): string {
 }
 
 function buildNotchFill(geo: ReturnType<typeof computeGeometry>): string {
-  const { B, r, notchLeft, notchRight, notchTop, nr2, ok, nk, f } = geo
+  const { B, outerR, notchLeft, notchRight, notchTop, nr2, outerOk, nk, f } = geo
 
   return [
-    `M ${f(notchLeft - r)},${B}`,
-    `L ${f(notchRight + r)},${B}`,
-    `C ${f(notchRight + r - ok)},${B} ${notchRight},${f(B - r + ok)} ${notchRight},${f(B - r)}`,
+    `M ${f(notchLeft - outerR)},${B}`,
+    `L ${f(notchRight + outerR)},${B}`,
+    `C ${f(notchRight + outerR - outerOk)},${B} ${notchRight},${f(B - outerR + outerOk)} ${notchRight},${f(B - outerR)}`,
     `L ${notchRight},${f(notchTop + nr2)}`,
     `C ${notchRight},${f(notchTop + nr2 - nk)} ${f(notchRight - nr2 + nk)},${notchTop} ${f(notchRight - nr2)},${notchTop}`,
     `L ${f(notchLeft + nr2)},${notchTop}`,
     `C ${f(notchLeft + nr2 - nk)},${notchTop} ${notchLeft},${f(notchTop + nr2 - nk)} ${notchLeft},${f(notchTop + nr2)}`,
-    `L ${notchLeft},${f(B - r)}`,
-    `C ${notchLeft},${f(B - r + ok)} ${f(notchLeft - r + ok)},${B} ${f(notchLeft - r)},${B}`,
+    `L ${notchLeft},${f(B - outerR)}`,
+    `C ${notchLeft},${f(B - outerR + outerOk)} ${f(notchLeft - outerR + outerOk)},${B} ${f(notchLeft - outerR)},${B}`,
     `Z`,
   ].join(" ")
 }

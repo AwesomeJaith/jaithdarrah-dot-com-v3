@@ -6,8 +6,8 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react"
+import { motion } from "motion/react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import type { Sticker as StickerType } from "@/lib/stickers"
@@ -19,7 +19,7 @@ import { NotchedBorder, NOTCHED_CLIP_ID } from "./notched-border"
 import { useCanvasPanZoom, MIN_SCALE, MAX_SCALE, ZOOM_STEP } from "./use-canvas-pan-zoom"
 import { useStickerPlacement } from "./use-sticker-placement"
 import { useUploadCard } from "./use-upload-card"
-import { UploadCard } from "./upload-card"
+import { UploadCard, CARD_WIDTH } from "./upload-card"
 
 const StickerCreator = dynamic(
   () =>
@@ -37,24 +37,13 @@ const MINIMAP_COMPACT_SIZE = 100
 const MINIMAP_DEFAULT_SIZE = 120
 const TOOLBAR_MARGIN = 12
 const TOOLBAR_GAP = 6
-const COMPACT_BREAKPOINT = 530
-const MOVE_MS = 200
-const SIZE_MS = 120
-const EASE = "cubic-bezier(0.4, 0, 0.2, 1)"
-const NOTCH_PAD = 6
+export const NOTCH_PAD = 6
+// Move minimap to top when the toolbar would overlap the expanded upload card.
+// The card is centered, so its right edge is at W/2 + notchWidth/2. The minimap
+// needs TOOLBAR_MARGIN clearance from the notch and from the container edge.
+const COMPACT_BREAKPOINT =
+  CARD_WIDTH + NOTCH_PAD * 2 + (MINIMAP_DEFAULT_SIZE + TOOLBAR_MARGIN * 2) * 2
 
-const COMPACT_QUERY = `(max-width: ${COMPACT_BREAKPOINT}px)`
-function subscribeCompact(cb: () => void) {
-  const mql = window.matchMedia(COMPACT_QUERY)
-  mql.addEventListener("change", cb)
-  return () => mql.removeEventListener("change", cb)
-}
-function getCompactSnapshot() {
-  return window.matchMedia(COMPACT_QUERY).matches
-}
-function getCompactServerSnapshot() {
-  return false
-}
 
 export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [stickerMap, setStickerMap] = useState<Map<string, StickerType>>(
@@ -155,12 +144,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     return () => mql.removeEventListener("change", handler)
   }, [])
 
-  // Responsive minimap positioning
-  const isCompact = useSyncExternalStore(
-    subscribeCompact,
-    getCompactSnapshot,
-    getCompactServerSnapshot
-  )
+  // Responsive minimap positioning — based on actual canvas width, not viewport
+  const isCompact = !containerSize || containerSize.width < COMPACT_BREAKPOINT
   const minimapSize = isCompact ? MINIMAP_COMPACT_SIZE : MINIMAP_DEFAULT_SIZE
   const toolbarTop =
     isCompact || !containerSize
@@ -171,31 +156,15 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         zoomRowHeight -
         TOOLBAR_MARGIN
 
-  // Animate toolbar on breakpoint crossing
-  const prevIsCompactRef = useRef(isCompact)
-  const toolbarWrapperRef = useRef<HTMLDivElement>(null!)
-  const minimapWrapperRef = useRef<HTMLDivElement>(null!)
-
-  useEffect(() => {
-    if (prevIsCompactRef.current === isCompact) return
-    prevIsCompactRef.current = isCompact
-
-    const tw = toolbarWrapperRef.current
-    const mw = minimapWrapperRef.current
-    if (!tw || !mw || prefersReducedMotion) return
-
-    const sizeDelay = isCompact ? MOVE_MS : 0
-    const moveDelay = isCompact ? 0 : SIZE_MS
-    tw.style.transition = `top ${MOVE_MS}ms ${EASE} ${moveDelay}ms, width ${SIZE_MS}ms ${EASE} ${sizeDelay}ms`
-    mw.style.transition = `width ${SIZE_MS}ms ${EASE} ${sizeDelay}ms, height ${SIZE_MS}ms ${EASE} ${sizeDelay}ms`
-
-    const totalMs = MOVE_MS + SIZE_MS + 50
-    const timer = setTimeout(() => {
-      tw.style.transition = "none"
-      mw.style.transition = "none"
-    }, totalMs)
-    return () => clearTimeout(timer)
-  }, [isCompact, prefersReducedMotion])
+  const toolbarSpring = {
+    type: "spring" as const,
+    stiffness: 400,
+    damping: 35,
+    mass: 0.8,
+  }
+  const toolbarTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : toolbarSpring
 
   // Navigate to a world position (from minimap click)
   const handleMinimapNavigate = useCallback(
@@ -314,10 +283,15 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       </div>
 
       {/* Toolbar (minimap + zoom controls) */}
-      <div
-        ref={toolbarWrapperRef}
+      <motion.div
         className="absolute z-40"
-        style={{ top: toolbarTop, right: TOOLBAR_MARGIN, width: minimapSize }}
+        initial={false}
+        animate={{
+          top: toolbarTop,
+          width: minimapSize,
+        }}
+        transition={toolbarTransition}
+        style={{ right: TOOLBAR_MARGIN }}
       >
         <StickerToolbar
           zoomRowRef={zoomRowRef}
@@ -340,10 +314,14 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             setStickerMap(new Map(initialStickers.map((s) => [s.id, s])))
           }}
           minimap={
-            <div
-              ref={minimapWrapperRef}
-              className="rounded-lg border border-border"
-              style={{ width: minimapSize, height: minimapSize }}
+            <motion.div
+              className="overflow-hidden rounded-lg border border-border"
+              initial={false}
+              animate={{
+                width: minimapSize,
+                height: minimapSize,
+              }}
+              transition={toolbarTransition}
             >
               <StickerMinimap
                 stickers={stickers}
@@ -353,10 +331,10 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                 onNavigate={handleMinimapNavigate}
                 size={minimapSize}
               />
-            </div>
+            </motion.div>
           }
         />
-      </div>
+      </motion.div>
 
       {/* Border with notch cutout */}
       {containerSize && notchSize && (
@@ -373,6 +351,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       {/* Notch controls — morphing upload card */}
       <UploadCard
         isPlacing={placement.isPlacing}
+        isCompact={isCompact}
+        notchPad={NOTCH_PAD}
         showUpload={upload.showUpload}
         uploadProcessing={upload.uploadProcessing}
         uploadError={upload.uploadError}
