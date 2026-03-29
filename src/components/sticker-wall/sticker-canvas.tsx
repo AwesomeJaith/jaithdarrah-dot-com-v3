@@ -837,7 +837,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
       {/* Notch controls — morphing upload card */}
       <div
-        ref={notchBarRef}
         className="absolute bottom-0 left-1/2 z-40 -translate-x-1/2"
       >
         <motion.div
@@ -850,7 +849,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             borderRadius: showUpload ? 14 : 8,
             backgroundColor: showUpload
               ? "var(--color-popover)"
-              : "transparent",
+              : "oklch(0% 0 0 / 0)",
             boxShadow: showUpload
               ? "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
               : "none",
@@ -962,7 +961,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           </div>
 
           {/* Invisible spacer — in flow to give the container its collapsed height */}
-          <div className="invisible flex items-center gap-1">
+          <div ref={notchBarRef} className="invisible flex items-center gap-1">
             <Button size="lg" tabIndex={-1} aria-hidden>
               {isPlacing ? "Cancel" : "Create a sticker"}
             </Button>
