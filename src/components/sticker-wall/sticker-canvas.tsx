@@ -11,13 +11,16 @@ import {
 } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
+import { AnimatePresence, motion } from "motion/react"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { Button } from "@/components/ui/button"
+import { FaUpload } from "react-icons/fa6"
 import { Sticker } from "./sticker"
 import { StickerInspector } from "./sticker-inspector"
 import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
 import { NotchedBorder, NOTCHED_CLIP_ID } from "./notched-border"
+import { processStickerImage } from "./process-sticker-image"
 
 const StickerCreator = dynamic(
   () =>
@@ -30,6 +33,9 @@ const StickerCreator = dynamic(
 type StickerCanvasProps = {
   initialStickers: StickerType[]
 }
+
+// Increase to slow down morph animation (e.g. 5 = 5× slower)
+const MORPH_SPEED = 1
 
 const MINIMAP_COMPACT_SIZE = 100
 const MINIMAP_DEFAULT_SIZE = 120
@@ -124,11 +130,17 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   } | null>(null)
   const [placementRotation, setPlacementRotation] = useState(0)
   const [showCreator, setShowCreator] = useState(false)
+  const [showUpload, setShowUpload] = useState(false)
+  const [uploadProcessing, setUploadProcessing] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadDragOver, setUploadDragOver] = useState(false)
   const [stickerBlob, setStickerBlob] = useState<Blob | null>(null)
   const [blurDataUrl, setBlurDataUrl] = useState<string | null>(null)
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
     null
   )
+  const uploadFileInputRef = useRef<HTMLInputElement>(null)
+  const notchRootRef = useRef<HTMLDivElement>(null)
 
   // Inspect mode
   const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(
@@ -594,10 +606,33 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         setStickerPreviewUrl(null)
       }
     } else {
-      // Open creator to upload and process image first
-      setShowCreator(true)
+      // Open inline upload morph
+      setShowUpload(true)
+      setUploadError(null)
     }
   }, [isPlacing, stickerPreviewUrl])
+
+  const handleUploadClose = useCallback(() => {
+    if (uploadProcessing) return
+    setShowUpload(false)
+    setUploadError(null)
+    setUploadDragOver(false)
+  }, [uploadProcessing])
+
+  // Close upload card on click outside
+  useEffect(() => {
+    if (!showUpload) return
+    const handler = (e: MouseEvent) => {
+      if (
+        notchRootRef.current &&
+        !notchRootRef.current.contains(e.target as Node)
+      ) {
+        handleUploadClose()
+      }
+    }
+    document.addEventListener("pointerdown", handler)
+    return () => document.removeEventListener("pointerdown", handler)
+  }, [showUpload, handleUploadClose])
 
   const handleStickerProcessed = useCallback(async (blob: Blob) => {
     const url = URL.createObjectURL(blob)
@@ -624,6 +659,28 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       // Blur generation is best-effort
     }
   }, [])
+
+  const handleUploadFile = useCallback(
+    async (file: File) => {
+      setUploadProcessing(true)
+      setUploadError(null)
+      try {
+        const avifBlob = await processStickerImage(file)
+        handleStickerProcessed(avifBlob)
+        setShowUpload(false)
+        setUploadError(null)
+      } catch (err) {
+        setUploadError(
+          err instanceof Error
+            ? err.message
+            : "Failed to process image. Please try another one."
+        )
+      } finally {
+        setUploadProcessing(false)
+      }
+    },
+    [handleStickerProcessed]
+  )
 
   const handleStickerSubmitted = useCallback(
     (newSticker: StickerType) => {
@@ -778,21 +835,173 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         />
       )}
 
-      {/* Notch controls */}
+      {/* Notch controls — morphing upload card */}
       <div
         ref={notchBarRef}
-        className="absolute bottom-0 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1"
+        className="absolute bottom-0 left-1/2 z-40 -translate-x-1/2"
       >
-        <Button
-          variant={isPlacing ? "outline" : "default"}
-          size="lg"
-          onClick={handlePlaceStickerClick}
+        <motion.div
+          ref={notchRootRef}
+          className="relative overflow-hidden"
+          initial={false}
+          animate={{
+            width: showUpload ? 320 : "auto",
+            height: showUpload ? 220 : "auto",
+            borderRadius: showUpload ? 14 : 8,
+            backgroundColor: showUpload
+              ? "var(--color-popover)"
+              : "transparent",
+            boxShadow: showUpload
+              ? "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
+              : "none",
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 550 / MORPH_SPEED,
+            damping: 45,
+            mass: 0.7,
+          }}
         >
-          {isPlacing ? "Cancel" : "Create a sticker"}
-        </Button>
-        <Button variant="outline" size="icon-lg" onClick={() => {}}>
-          ?
-        </Button>
+          {/* Upload card content — full size, anchored to bottom so it reveals from bottom up */}
+          <div
+            className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
+            style={{
+              width: 320,
+              height: 220,
+              pointerEvents: showUpload ? "all" : "none",
+              visibility: showUpload ? "visible" : "hidden",
+            }}
+          >
+            <AnimatePresence>
+              {showUpload && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    duration: 0.15 * MORPH_SPEED,
+                    delay: showUpload ? 0.1 * MORPH_SPEED : 0,
+                  }}
+                  className="flex h-full flex-col gap-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium">Create your sticker</h2>
+                    <button
+                      onClick={handleUploadClose}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Close"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div
+                    className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors ${
+                      uploadDragOver
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground"
+                    }`}
+                    onClick={() => uploadFileInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setUploadDragOver(true)
+                    }}
+                    onDragLeave={() => setUploadDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      setUploadDragOver(false)
+                      const file = e.dataTransfer.files[0]
+                      if (file) handleUploadFile(file)
+                    }}
+                  >
+                    {uploadProcessing ? (
+                      <p className="text-sm text-muted-foreground">
+                        Processing...
+                      </p>
+                    ) : (
+                      <>
+                        <FaUpload className="size-5 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Drag & drop or click
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          PNG, JPEG, or WebP
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  <input
+                    ref={uploadFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleUploadFile(file)
+                    }}
+                    className="hidden"
+                  />
+
+                  {uploadError && (
+                    <p className="text-xs text-destructive">{uploadError}</p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Invisible spacer — in flow to give the container its collapsed height */}
+          <div className="invisible flex items-center gap-1">
+            <Button size="lg" tabIndex={-1} aria-hidden>
+              {isPlacing ? "Cancel" : "Create a sticker"}
+            </Button>
+            {!isPlacing && (
+              <Button size="icon-lg" tabIndex={-1} aria-hidden>
+                ?
+              </Button>
+            )}
+          </div>
+
+          {/* Button row — pinned to bottom center, fades out/in */}
+          <motion.div
+            className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center justify-center gap-1"
+            animate={{ opacity: showUpload ? 0 : 1 }}
+            transition={{
+              duration: 0.1 * MORPH_SPEED,
+              delay: showUpload ? 0 : 0.15 * MORPH_SPEED,
+            }}
+          >
+            <Button
+              variant={isPlacing ? "outline" : "default"}
+              size="lg"
+              onClick={handlePlaceStickerClick}
+              style={{ pointerEvents: showUpload ? "none" : "auto" }}
+            >
+              {isPlacing ? "Cancel" : "Create a sticker"}
+            </Button>
+            {!isPlacing && (
+              <Button
+                variant="outline"
+                size="icon-lg"
+                onClick={() => {}}
+                style={{ pointerEvents: showUpload ? "none" : "auto" }}
+              >
+                ?
+              </Button>
+            )}
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Placement hint */}
