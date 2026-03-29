@@ -6,19 +6,31 @@ type UseUploadCardParams = {
 }
 
 export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
-  const [showUpload, setShowUpload] = useState(false)
+  const [expandedCard, setExpandedCard] = useState<
+    "upload" | "help" | null
+  >(null)
+  const showUpload = expandedCard === "upload"
+  const showHelp = expandedCard === "help"
   const [uploadProcessing, setUploadProcessing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadDragOver, setUploadDragOver] = useState(false)
   const uploadFileInputRef = useRef<HTMLInputElement>(null!)
   const notchRootRef = useRef<HTMLDivElement>(null!)
 
-  const handleUploadClose = useCallback(() => {
-    if (uploadProcessing) return
-    setShowUpload(false)
+  const openUploadCard = useCallback(() => {
+    setExpandedCard("upload")
+  }, [])
+
+  const openHelpCard = useCallback(() => {
+    setExpandedCard("help")
+  }, [])
+
+  const handleCardClose = useCallback(() => {
+    if (expandedCard === "upload" && uploadProcessing) return
+    setExpandedCard(null)
     setUploadError(null)
     setUploadDragOver(false)
-  }, [uploadProcessing])
+  }, [expandedCard, uploadProcessing])
 
   const handleUploadFile = useCallback(
     async (file: File) => {
@@ -27,7 +39,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
       try {
         const avifBlob = await processStickerImage(file)
         await onStickerProcessed(avifBlob)
-        setShowUpload(false)
+        setExpandedCard(null)
         setUploadError(null)
       } catch (err) {
         setUploadError(
@@ -42,33 +54,35 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     [onStickerProcessed]
   )
 
-  // Close upload card on click outside
+  // Close card on click outside
   useEffect(() => {
-    if (!showUpload) return
+    if (expandedCard === null) return
     const handler = (e: MouseEvent) => {
       if (
         notchRootRef.current &&
         !notchRootRef.current.contains(e.target as Node)
       ) {
-        handleUploadClose()
+        handleCardClose()
       }
     }
     document.addEventListener("pointerdown", handler)
     return () => document.removeEventListener("pointerdown", handler)
-  }, [showUpload, handleUploadClose])
+  }, [expandedCard, handleCardClose])
 
   const clearError = useCallback(() => setUploadError(null), [])
 
   return {
     showUpload,
-    setShowUpload,
+    showHelp,
+    openUploadCard,
+    openHelpCard,
     uploadProcessing,
     uploadError,
     uploadDragOver,
     setUploadDragOver,
     uploadFileInputRef,
     notchRootRef,
-    handleUploadClose,
+    handleCardClose,
     handleUploadFile,
     clearError,
   }

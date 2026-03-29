@@ -15,6 +15,7 @@ type UploadCardProps = {
   isCompact: boolean
   notchPad: number
   showUpload: boolean
+  showHelp: boolean
   uploadProcessing: boolean
   uploadError: string | null
   uploadDragOver: boolean
@@ -22,9 +23,10 @@ type UploadCardProps = {
   uploadFileInputRef: React.RefObject<HTMLInputElement>
   notchRootRef: React.RefObject<HTMLDivElement>
   notchBarRef: React.RefObject<HTMLDivElement>
-  handleUploadClose: () => void
+  handleCardClose: () => void
   handleUploadFile: (file: File) => void
   handlePlaceStickerClick: () => void
+  handleHelpOpen: () => void
 }
 
 export function UploadCard({
@@ -32,6 +34,7 @@ export function UploadCard({
   isCompact,
   notchPad,
   showUpload,
+  showHelp,
   uploadProcessing,
   uploadError,
   uploadDragOver,
@@ -39,12 +42,14 @@ export function UploadCard({
   uploadFileInputRef,
   notchRootRef,
   notchBarRef,
-  handleUploadClose,
+  handleCardClose,
   handleUploadFile,
   handlePlaceStickerClick,
+  handleHelpOpen,
 }: UploadCardProps) {
   const cardWidth = isCompact ? CARD_WIDTH_COMPACT : CARD_WIDTH
   const cardHeight = isCompact ? CARD_HEIGHT_COMPACT : CARD_HEIGHT
+  const isExpanded = showUpload || showHelp
 
   return (
     <div className="absolute bottom-0 left-1/2 z-40 -translate-x-1/2">
@@ -53,13 +58,13 @@ export function UploadCard({
         className="relative overflow-hidden"
         initial={false}
         animate={{
-          width: showUpload ? cardWidth : "auto",
-          height: showUpload ? cardHeight : "auto",
-          borderRadius: showUpload ? 14 - notchPad : 8,
-          backgroundColor: showUpload
+          width: isExpanded ? cardWidth : "auto",
+          height: isExpanded ? cardHeight : "auto",
+          borderRadius: isExpanded ? 14 - notchPad : 8,
+          backgroundColor: isExpanded
             ? "var(--color-popover)"
             : "oklch(0% 0 0 / 0)",
-          boxShadow: showUpload
+          boxShadow: isExpanded
             ? "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
             : "none",
         }}
@@ -78,6 +83,7 @@ export function UploadCard({
             height: cardHeight,
             pointerEvents: showUpload ? "all" : "none",
             visibility: showUpload ? "visible" : "hidden",
+            zIndex: showUpload ? 1 : 0,
           }}
         >
           <AnimatePresence>
@@ -95,7 +101,7 @@ export function UploadCard({
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-medium">Create your sticker</h2>
                   <button
-                    onClick={handleUploadClose}
+                    onClick={handleCardClose}
                     className="text-muted-foreground hover:text-foreground"
                     aria-label="Close"
                   >
@@ -169,6 +175,65 @@ export function UploadCard({
           </AnimatePresence>
         </div>
 
+        {/* Help card content — full size, anchored to bottom so it reveals from bottom up */}
+        <div
+          className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
+          style={{
+            width: cardWidth,
+            height: cardHeight,
+            pointerEvents: showHelp ? "all" : "none",
+            visibility: showHelp ? "visible" : "hidden",
+            zIndex: showHelp ? 1 : 0,
+          }}
+        >
+          <AnimatePresence>
+            {showHelp && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{
+                  duration: 0.15 * MORPH_SPEED,
+                  delay: showHelp ? 0.1 * MORPH_SPEED : 0,
+                }}
+                className="flex h-full flex-col gap-3"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium">How it works</h2>
+                  <button
+                    onClick={handleCardClose}
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Close"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-2 rounded-lg bg-muted p-3">
+                  <div className="flex h-16 items-center justify-center rounded-md bg-background/50 text-muted-foreground">
+                    <span className="text-xs">Tutorial video coming soon</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Upload an image, click anywhere on the canvas to place it,
+                    and scroll to rotate before placing.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         {/* Invisible spacer — in flow to give the container its collapsed height */}
         <div ref={notchBarRef} className="invisible flex items-center gap-1">
           <Button size="lg" tabIndex={-1} aria-hidden>
@@ -184,17 +249,18 @@ export function UploadCard({
         {/* Button row — pinned to bottom center, fades out/in */}
         <motion.div
           className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center justify-center gap-1"
-          animate={{ opacity: showUpload ? 0 : 1 }}
+          animate={{ opacity: isExpanded ? 0 : 1 }}
           transition={{
             duration: 0.1 * MORPH_SPEED,
-            delay: showUpload ? 0 : 0.15 * MORPH_SPEED,
+            delay: isExpanded ? 0 : 0.15 * MORPH_SPEED,
           }}
         >
           <Button
             variant={isPlacing ? "outline" : "default"}
             size="lg"
             onClick={handlePlaceStickerClick}
-            style={{ pointerEvents: showUpload ? "none" : "auto" }}
+            style={{ pointerEvents: isExpanded ? "none" : "auto" }}
+            className="text-center transition-all duration-150 active:scale-98"
           >
             {isPlacing ? "Cancel" : "Create a sticker"}
           </Button>
@@ -202,8 +268,9 @@ export function UploadCard({
             <Button
               variant="outline"
               size="icon-lg"
-              onClick={() => {}}
-              style={{ pointerEvents: showUpload ? "none" : "auto" }}
+              onClick={handleHelpOpen}
+              style={{ pointerEvents: isExpanded ? "none" : "auto" }}
+              className="text-center transition-all duration-150 active:scale-98"
             >
               ?
             </Button>

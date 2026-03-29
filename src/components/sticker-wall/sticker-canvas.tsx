@@ -112,7 +112,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     if (placement.isPlacing) {
       placement.cancelPlacement()
     } else {
-      upload.setShowUpload(true)
+      upload.openUploadCard()
       upload.clearError()
     }
   }, [placement, upload])
@@ -354,6 +354,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         isCompact={isCompact}
         notchPad={NOTCH_PAD}
         showUpload={upload.showUpload}
+        showHelp={upload.showHelp}
         uploadProcessing={upload.uploadProcessing}
         uploadError={upload.uploadError}
         uploadDragOver={upload.uploadDragOver}
@@ -361,9 +362,10 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         uploadFileInputRef={upload.uploadFileInputRef}
         notchRootRef={upload.notchRootRef}
         notchBarRef={notchBarRef}
-        handleUploadClose={upload.handleUploadClose}
+        handleCardClose={upload.handleCardClose}
         handleUploadFile={upload.handleUploadFile}
         handlePlaceStickerClick={handlePlaceStickerClick}
+        handleHelpOpen={upload.openHelpCard}
       />
 
       {/* Placement hint */}
