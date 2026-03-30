@@ -43,8 +43,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const stickers = useMemo(() => Array.from(stickerMap.values()), [stickerMap])
 
   // Shared state between placement and upload
-  const [, setStickerBlob] = useState<Blob | null>(null)
-  const [, setBlurDataUrl] = useState<string | null>(null)
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(null)
 
   // Inspect mode
@@ -74,8 +72,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const placement = useStickerPlacement({
     stickerPreviewUrl,
     setStickerPreviewUrl,
-    setStickerBlob,
-    setBlurDataUrl,
     onStickerSubmitted: handleStickerSubmitted,
   })
 

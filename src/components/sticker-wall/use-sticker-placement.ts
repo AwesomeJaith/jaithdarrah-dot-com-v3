@@ -38,8 +38,6 @@ type PanZoomOutputs = {
 type UseStickerPlacementParams = {
   stickerPreviewUrl: string | null
   setStickerPreviewUrl: (url: string | null) => void
-  setStickerBlob: (blob: Blob | null) => void
-  setBlurDataUrl: (url: string | null) => void
   onStickerSubmitted: (sticker: Sticker) => void
 }
 
@@ -60,8 +58,6 @@ async function generateBlurDataUrl(blob: Blob): Promise<string> {
 export function useStickerPlacement({
   stickerPreviewUrl,
   setStickerPreviewUrl,
-  setStickerBlob,
-  setBlurDataUrl,
   onStickerSubmitted,
 }: UseStickerPlacementParams) {
   const [isPlacing, setIsPlacing] = useState(false)
@@ -197,8 +193,6 @@ export function useStickerPlacement({
         setIsPlacing(false)
         setPlacementPos(null)
         setPlacementRotation(0)
-        setStickerBlob(null)
-        setBlurDataUrl(null)
         stickerDataRef.current = null
         blurDataUrlRef.current = null
         lastPointerScreenRef.current = null
@@ -212,7 +206,7 @@ export function useStickerPlacement({
         setIsSubmitting(false)
       }
     },
-    [isSubmitting, placementRotation, stickerPreviewUrl, setStickerBlob, setStickerPreviewUrl, setBlurDataUrl, onStickerSubmitted]
+    [isSubmitting, placementRotation, stickerPreviewUrl, setStickerPreviewUrl, onStickerSubmitted]
   )
 
   const onWheel = useCallback((deltaY: number) => {
@@ -224,7 +218,6 @@ export function useStickerPlacement({
     setIsPlacing(false)
     setPlacementPos(null)
     setPlacementRotation(0)
-    setStickerBlob(null)
     stickerDataRef.current = null
     blurDataUrlRef.current = null
     lastPointerScreenRef.current = null
@@ -232,11 +225,10 @@ export function useStickerPlacement({
       URL.revokeObjectURL(stickerPreviewUrl)
       setStickerPreviewUrl(null)
     }
-  }, [stickerPreviewUrl, setStickerBlob, setStickerPreviewUrl])
+  }, [stickerPreviewUrl, setStickerPreviewUrl])
 
   const handleStickerProcessed = useCallback(async (data: StickerData) => {
     const url = URL.createObjectURL(data.blob)
-    setStickerBlob(data.blob)
     setStickerPreviewUrl(url)
     stickerDataRef.current = data
     setIsPlacing(true)
@@ -245,12 +237,11 @@ export function useStickerPlacement({
     // Generate blur placeholder in the background
     try {
       const blurUrl = await generateBlurDataUrl(data.blob)
-      setBlurDataUrl(blurUrl)
       blurDataUrlRef.current = blurUrl
     } catch {
       // Blur generation is best-effort
     }
-  }, [setStickerBlob, setStickerPreviewUrl, setBlurDataUrl])
+  }, [setStickerPreviewUrl])
 
   return {
     isPlacing,

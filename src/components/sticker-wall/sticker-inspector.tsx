@@ -221,14 +221,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               className="pointer-events-none absolute inset-0 rounded-sm opacity-25"
               style={{
                 background: glossGradient,
-                maskImage: `url(${sticker.image_url})`,
-                maskSize: "contain",
-                maskRepeat: "no-repeat",
-                maskPosition: "center",
-                WebkitMaskImage: `url(${sticker.image_url})`,
-                WebkitMaskSize: "contain",
-                WebkitMaskRepeat: "no-repeat",
-                WebkitMaskPosition: "center",
+                ...effectMaskStyles(sticker.image_url),
               }}
             />
           </motion.div>
