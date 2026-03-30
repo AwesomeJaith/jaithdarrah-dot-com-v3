@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { CatLogo } from "@/components/ui/cat-logo"
 import { Progress } from "@/components/ui/progress"
 import { ShimmeringText } from "@/components/ui/shimmering-text"
-import { useInterpolatedProgress } from "./use-interpolated-progress"
 import Image from "next/image"
 
 const MORPH_SPEED = 1
@@ -127,23 +126,24 @@ function ProcessingDisplay({
   processingDone: boolean
   onComplete: () => void
 }) {
-  const progress = useInterpolatedProgress(targetProgress, processingDone)
+  const progress = processingDone ? 1 : Math.min(targetProgress, 0.95)
   const displayedStage = useStagedText(stageText, 1200, processingDone)
   const completeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // When progress reaches ~100% after done, transition after a brief pause.
-  // Timer is stored in a ref so rAF-driven re-renders don't cancel it.
   useEffect(() => {
-    if (processingDone && progress > 0.99 && !completeTimer.current) {
-      completeTimer.current = setTimeout(onComplete, 1000)
+    if (processingDone && !completeTimer.current) {
+      completeTimer.current = setTimeout(onComplete, 1200)
     }
-  }, [processingDone, progress, onComplete])
+  }, [processingDone, onComplete])
   useEffect(() => () => clearTimeout(completeTimer.current), [])
 
   return (
     <div className="flex w-full flex-col items-center justify-center gap-2 px-6">
       <CatLogo shimmer startOnView={false} duration={0.5} repeatDelay={0.3} />
-      <Progress className="w-full" value={Math.round(progress * 100)} />
+      <Progress
+        className="w-full **:data-[slot=progress-indicator]:duration-200 **:data-[slot=progress-indicator]:ease-out"
+        value={Math.round(progress * 100)}
+      />
       <div className="relative h-5 w-full">
         <AnimatePresence>
           <motion.div
@@ -442,7 +442,7 @@ export function UploadCard({
               className="min-h-0 max-w-full flex-1 object-contain"
             />
           )}
-          <Button size="lg" onClick={transitionToMessage}>
+          <Button size="lg" className="w-full" onClick={transitionToMessage}>
             Next
           </Button>
         </div>

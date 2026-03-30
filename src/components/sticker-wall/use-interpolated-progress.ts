@@ -20,9 +20,8 @@ export function useInterpolatedProgress(target: number, done: boolean) {
         setValue(effectiveTarget)
         return
       }
-      // Slower factor (0.03) keeps the bar moving longer between worker updates.
       // Faster factor (0.12) once done so the final 95%→100% feels snappy.
-      const factor = done ? 0.12 : 0.03
+      const factor = done ? 0.12 : 0.05
       current.current += diff * factor
       setValue(current.current)
       raf = requestAnimationFrame(animate)
