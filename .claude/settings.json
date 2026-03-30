@@ -4,6 +4,8 @@
     "allow": [
       "Bash(pnpm typecheck:*)",
       "Bash(pnpm lint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(pnpm format:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(rg:*)",

@@ -156,18 +156,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     ? { duration: 0 }
     : toolbarSpring
 
-  // Navigate to a world position (from minimap click)
-  const handleMinimapNavigate = useCallback(
-    (worldX: number, worldY: number) => {
-      if (!containerSize) return
-      setTranslate({
-        x: containerSize.width / 2 - worldX * scale,
-        y: containerSize.height / 2 - worldY * scale,
-      })
-    },
-    [containerSize, scale, setTranslate]
-  )
-
   // Compute viewport bounds in world coordinates
   const getViewportBounds = useCallback(() => {
     const container = containerRef.current
@@ -312,7 +300,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                     translate={translate}
                     scale={scale}
                     containerSize={containerSize}
-                    onNavigate={handleMinimapNavigate}
                     size={minimapSize}
                   />
                 </motion.div>

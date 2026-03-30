@@ -4,29 +4,48 @@ import { computeAlphaOverlapRatio, MAX_OVERLAP_RATIO } from "@/lib/overlap"
 import type { StickerData } from "./use-upload-card"
 
 const EDGE_PAN_MARGIN = 50
-const EDGE_PAN_MAX_SPEED = 5
+const EDGE_PAN_SLOW_SPEED = 2
+const EDGE_PAN_ACCEL = 0.05
+const EDGE_PAN_MAX_SPEED = 25
+
+function edgePanAxis(rel: number, size: number): number {
+  const distFromNear = rel
+  const distFromFar = size - rel
+
+  if (distFromNear >= EDGE_PAN_MARGIN && distFromFar >= EDGE_PAN_MARGIN)
+    return 0
+
+  // Closer edge wins
+  if (distFromNear < distFromFar) {
+    if (distFromNear >= 0) {
+      // Inside canvas, within margin — slow linear ramp
+      return EDGE_PAN_SLOW_SPEED * (1 - distFromNear / EDGE_PAN_MARGIN)
+    }
+    // Past the edge — accelerate based on how far out
+    return Math.min(
+      EDGE_PAN_MAX_SPEED,
+      EDGE_PAN_SLOW_SPEED + -distFromNear * EDGE_PAN_ACCEL
+    )
+  } else {
+    if (distFromFar >= 0) {
+      return -(EDGE_PAN_SLOW_SPEED * (1 - distFromFar / EDGE_PAN_MARGIN))
+    }
+    return -Math.min(
+      EDGE_PAN_MAX_SPEED,
+      EDGE_PAN_SLOW_SPEED + -distFromFar * EDGE_PAN_ACCEL
+    )
+  }
+}
 
 function computeEdgePanDelta(
   screenX: number,
   screenY: number,
-  rect: DOMRect,
-  margin: number,
-  maxSpeed: number
+  rect: DOMRect
 ): { dx: number; dy: number } {
-  let dx = 0,
-    dy = 0
-  const relX = screenX - rect.left
-  const relY = screenY - rect.top
-
-  if (relX < margin) dx = maxSpeed * (1 - relX / margin)
-  else if (relX > rect.width - margin)
-    dx = -maxSpeed * (1 - (rect.width - relX) / margin)
-
-  if (relY < margin) dy = maxSpeed * (1 - relY / margin)
-  else if (relY > rect.height - margin)
-    dy = -maxSpeed * (1 - (rect.height - relY) / margin)
-
-  return { dx, dy }
+  return {
+    dx: edgePanAxis(screenX - rect.left, rect.width),
+    dy: edgePanAxis(screenY - rect.top, rect.height),
+  }
 }
 
 type PanZoomOutputs = {
@@ -175,6 +194,16 @@ export function useStickerPlacement({
     panZoomRef.current = pz
   }, [])
 
+  // Track pointer globally during placement so edge-pan works outside canvas
+  useEffect(() => {
+    if (!(isPlacing && stickerPreviewUrl) || pendingConfirm) return
+    const handler = (e: PointerEvent) => {
+      lastPointerScreenRef.current = { x: e.clientX, y: e.clientY }
+    }
+    window.addEventListener("pointermove", handler)
+    return () => window.removeEventListener("pointermove", handler)
+  }, [isPlacing, stickerPreviewUrl, pendingConfirm])
+
   // Edge-pan: auto-scroll when cursor is near canvas edge during placement
   useEffect(() => {
     if (!(isPlacing && stickerPreviewUrl) || pendingConfirm) {
@@ -195,26 +224,24 @@ export function useStickerPlacement({
       }
 
       const rect = container.getBoundingClientRect()
-      const { dx, dy } = computeEdgePanDelta(
-        pointer.x,
-        pointer.y,
-        rect,
-        EDGE_PAN_MARGIN,
-        EDGE_PAN_MAX_SPEED
-      )
+      const { dx, dy } = computeEdgePanDelta(pointer.x, pointer.y, rect)
+      const panning = dx !== 0 || dy !== 0
 
-      if (dx !== 0 || dy !== 0) {
-        setTranslate((prev) => {
-          const next = { x: prev.x + dx, y: prev.y + dy }
-          const worldX = (pointer.x - rect.left - next.x) / scale
-          const worldY = (pointer.y - rect.top - next.y) / scale
-          setPlacementPos({
-            x: worldX - placementSize.width / 2,
-            y: worldY - placementSize.height / 2,
-          })
-          return next
+      // Single source of truth for sticker position — avoids fighting
+      // between pointer events and edge-pan by always computing here.
+      setTranslate((prev) => {
+        const next = panning ? { x: prev.x + dx, y: prev.y + dy } : prev
+        const worldX = (pointer.x - rect.left - next.x) / scale
+        const worldY = (pointer.y - rect.top - next.y) / scale
+        setPlacementPos((prevPos) => {
+          const newX = worldX - placementSize.width / 2
+          const newY = worldY - placementSize.height / 2
+          if (prevPos && prevPos.x === newX && prevPos.y === newY)
+            return prevPos
+          return { x: newX, y: newY }
         })
-      }
+        return next
+      })
 
       edgePanRafRef.current = requestAnimationFrame(tick)
     }
@@ -235,13 +262,9 @@ export function useStickerPlacement({
       lastPointerScreenRef.current = { x: screenX, y: screenY }
       if (pendingConfirm) return
       if (overlapError) setOverlapError(false)
-      const world = panZoomRef.current.screenToWorld(screenX, screenY)
-      setPlacementPos({
-        x: world.x - placementSize.width / 2,
-        y: world.y - placementSize.height / 2,
-      })
+      // Position is computed by the rAF tick loop (single source of truth)
     },
-    [pendingConfirm, overlapError, placementSize]
+    [pendingConfirm, overlapError]
   )
 
   const onPointerConfirm = useCallback(

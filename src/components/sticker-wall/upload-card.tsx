@@ -172,11 +172,13 @@ function ProcessingDisplay({
 function CardPage({
   show,
   cardWidth,
+  minHeight,
   onHeight,
   children,
 }: {
   show: boolean
   cardWidth: number
+  minHeight?: number
   onHeight?: (h: number) => void
   children: React.ReactNode
 }) {
@@ -184,17 +186,18 @@ function CardPage({
 
   useEffect(() => {
     const el = measureRef.current
-    if (!el || !onHeight) return
+    if (!el || !onHeight || !show) return
     const ro = new ResizeObserver(() => onHeight(el.scrollHeight))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [onHeight])
+  }, [onHeight, show])
 
   return (
     <div
       className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
       style={{
         width: cardWidth,
+        minHeight,
         pointerEvents: show ? "all" : "none",
         zIndex: show ? 1 : 0,
       }}
@@ -210,7 +213,7 @@ function CardPage({
               duration: 0.15 * MORPH_SPEED,
               delay: show ? 0.1 * MORPH_SPEED : 0,
             }}
-            className="flex flex-col gap-3"
+            className="flex flex-1 flex-col gap-3"
           >
             {children}
           </motion.div>
@@ -453,6 +456,7 @@ export function UploadCard({
       <CardPage
         show={showMessage}
         cardWidth={cardWidth}
+        minHeight={pageHeights.place}
         onHeight={onMessageHeight}
       >
         <div className="flex items-center justify-between">
@@ -482,7 +486,7 @@ export function UploadCard({
             />
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-1 flex-col gap-1">
             <div className="flex items-baseline justify-between">
               <label htmlFor="notch-message" className="text-xs font-medium">
                 Message{" "}
@@ -499,7 +503,7 @@ export function UploadCard({
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Leave a message..."
               rows={3}
-              className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm transition-colors outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+              className="flex-1 rounded-md border border-input bg-background px-2.5 py-1.5 text-sm transition-colors outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
             />
           </div>
         </div>
