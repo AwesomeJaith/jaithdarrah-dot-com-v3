@@ -41,6 +41,9 @@ type UseStickerPlacementParams = {
   onStickerSubmitted: (sticker: Sticker) => void
 }
 
+export const STICKER_SIZE = 100
+const STICKER_HALF = STICKER_SIZE / 2
+
 async function generateBlurDataUrl(blob: Blob): Promise<string> {
   const bitmap = await createImageBitmap(blob)
   const canvas = new OffscreenCanvas(16, 16)
@@ -61,6 +64,7 @@ export function useStickerPlacement({
   onStickerSubmitted,
 }: UseStickerPlacementParams) {
   const [isPlacing, setIsPlacing] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState(false)
   const [placementPos, setPlacementPos] = useState<{
     x: number
     y: number
@@ -71,6 +75,20 @@ export function useStickerPlacement({
   // Store sticker metadata for auto-submit
   const stickerDataRef = useRef<StickerData | null>(null)
   const blurDataUrlRef = useRef<string | null>(null)
+
+  const resetAll = useCallback(() => {
+    setIsPlacing(false)
+    setPendingConfirm(false)
+    setPlacementPos(null)
+    setPlacementRotation(0)
+    stickerDataRef.current = null
+    blurDataUrlRef.current = null
+    lastPointerScreenRef.current = null
+    if (stickerPreviewUrl) {
+      URL.revokeObjectURL(stickerPreviewUrl)
+      setStickerPreviewUrl(null)
+    }
+  }, [stickerPreviewUrl, setStickerPreviewUrl])
 
   const edgePanRafRef = useRef<number | null>(null)
   const lastPointerScreenRef = useRef<{ x: number; y: number } | null>(null)
@@ -89,7 +107,7 @@ export function useStickerPlacement({
 
   // Edge-pan: auto-scroll when cursor is near canvas edge during placement
   useEffect(() => {
-    if (!(isPlacing && stickerPreviewUrl)) {
+    if (!(isPlacing && stickerPreviewUrl) || pendingConfirm) {
       if (edgePanRafRef.current !== null) {
         cancelAnimationFrame(edgePanRafRef.current)
         edgePanRafRef.current = null
@@ -136,26 +154,38 @@ export function useStickerPlacement({
         edgePanRafRef.current = null
       }
     }
-  }, [isPlacing, stickerPreviewUrl])
+  }, [isPlacing, stickerPreviewUrl, pendingConfirm])
 
   // Callbacks for the pan/zoom hook
   const onPointerMove = useCallback(
     (screenX: number, screenY: number) => {
       lastPointerScreenRef.current = { x: screenX, y: screenY }
+      if (pendingConfirm) return
       const world = panZoomRef.current.screenToWorld(screenX, screenY)
-      setPlacementPos({ x: world.x - 50, y: world.y - 50 })
+      setPlacementPos({ x: world.x - STICKER_HALF, y: world.y - STICKER_HALF })
     },
-    []
+    [pendingConfirm]
   )
 
   const onPointerConfirm = useCallback(
-    async (screenX: number, screenY: number) => {
+    (screenX: number, screenY: number) => {
+      if (pendingConfirm || isSubmitting) return
       const world = panZoomRef.current.screenToWorld(screenX, screenY)
-      const pos = { x: world.x - 50, y: world.y - 50 }
-      setPlacementPos(pos)
+      setPlacementPos({ x: world.x - STICKER_HALF, y: world.y - STICKER_HALF })
+      setPendingConfirm(true)
+    },
+    [pendingConfirm, isSubmitting]
+  )
 
+  const cancelConfirm = useCallback(() => {
+    setPendingConfirm(false)
+  }, [])
+
+  const confirmPlacement = useCallback(
+    async () => {
       const data = stickerDataRef.current
-      if (!data || isSubmitting) return
+      const pos = placementPos
+      if (!data || !pos || isSubmitting) return
 
       setIsSubmitting(true)
 
@@ -170,8 +200,8 @@ export function useStickerPlacement({
         if (data.effect) formData.append("effect", data.effect)
         formData.append("x", String(pos.x))
         formData.append("y", String(pos.y))
-        formData.append("width", "100")
-        formData.append("height", "100")
+        formData.append("width", String(STICKER_SIZE))
+        formData.append("height", String(STICKER_SIZE))
         formData.append("rotation", String(placementRotation))
 
         const res = await fetch("/api/stickers", {
@@ -188,44 +218,25 @@ export function useStickerPlacement({
 
         const sticker: Sticker = await res.json()
         onStickerSubmitted(sticker)
-
-        // Reset all state
-        setIsPlacing(false)
-        setPlacementPos(null)
-        setPlacementRotation(0)
-        stickerDataRef.current = null
-        blurDataUrlRef.current = null
-        lastPointerScreenRef.current = null
-        if (stickerPreviewUrl) {
-          URL.revokeObjectURL(stickerPreviewUrl)
-          setStickerPreviewUrl(null)
-        }
+        resetAll()
       } catch (err) {
         console.error("Sticker submission error:", err)
       } finally {
         setIsSubmitting(false)
       }
     },
-    [isSubmitting, placementRotation, stickerPreviewUrl, setStickerPreviewUrl, onStickerSubmitted]
+    [isSubmitting, placementPos, placementRotation, resetAll, onStickerSubmitted]
   )
 
   const onWheel = useCallback((deltaY: number) => {
+    if (pendingConfirm) return
     const delta = deltaY > 0 ? 5 : -5
     setPlacementRotation((prev) => prev + delta)
-  }, [])
+  }, [pendingConfirm])
 
   const cancelPlacement = useCallback(() => {
-    setIsPlacing(false)
-    setPlacementPos(null)
-    setPlacementRotation(0)
-    stickerDataRef.current = null
-    blurDataUrlRef.current = null
-    lastPointerScreenRef.current = null
-    if (stickerPreviewUrl) {
-      URL.revokeObjectURL(stickerPreviewUrl)
-      setStickerPreviewUrl(null)
-    }
-  }, [stickerPreviewUrl, setStickerPreviewUrl])
+    resetAll()
+  }, [resetAll])
 
   const handleStickerProcessed = useCallback(async (data: StickerData) => {
     const url = URL.createObjectURL(data.blob)
@@ -245,10 +256,13 @@ export function useStickerPlacement({
 
   return {
     isPlacing,
+    pendingConfirm,
     placementPos,
     placementRotation,
     isSubmitting,
     cancelPlacement,
+    cancelConfirm,
+    confirmPlacement,
     handleStickerProcessed,
     onPointerMove,
     onPointerConfirm,

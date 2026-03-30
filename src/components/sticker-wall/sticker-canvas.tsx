@@ -9,6 +9,7 @@ import {
 } from "react"
 import { motion } from "motion/react"
 import Image from "next/image"
+import { Button } from "@/components/ui/button"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { Sticker } from "./sticker"
 import { StickerInspector } from "./sticker-inspector"
@@ -16,7 +17,7 @@ import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
 import { NotchFrame } from "@/components/ui/notch-frame"
 import { useCanvasPanZoom, MIN_SCALE, MAX_SCALE, ZOOM_STEP } from "./use-canvas-pan-zoom"
-import { useStickerPlacement } from "./use-sticker-placement"
+import { useStickerPlacement, STICKER_SIZE } from "./use-sticker-placement"
 import { useUploadCard } from "./use-upload-card"
 import { UploadCard, CARD_WIDTH } from "./upload-card"
 
@@ -298,12 +299,30 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             />
           </motion.div>
 
-          {/* Placement hint */}
+          {/* Placement hint / confirm dialog */}
           {placement.isPlacing && stickerPreviewUrl && (
-            <div className="absolute top-4 left-1/2 z-40 -translate-x-1/2 rounded-lg border border-sticker-border bg-sticker-panel px-4 py-2 text-sm text-popover-foreground shadow-md">
-              {placement.isSubmitting
-                ? "Submitting..."
-                : "Click to place your sticker. Scroll to rotate."}
+            <div className="absolute top-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-sticker-border bg-sticker-panel p-1.5 text-sm text-popover-foreground shadow-md">
+              {placement.isSubmitting ? (
+                <span className="px-2.5 py-0.5">Submitting...</span>
+              ) : placement.pendingConfirm ? (
+                <>
+                  <span className="pl-2.5">Place here?</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button size="sm" onClick={placement.confirmPlacement}>
+                      Confirm
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={placement.cancelConfirm}
+                    >
+                      Back
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <span className="px-2.5 py-0.5">Click to place your sticker. Scroll to rotate.</span>
+              )}
             </div>
           )}
 
@@ -359,12 +378,12 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           {/* Placement preview */}
           {placement.isPlacing && stickerPreviewUrl && placement.placementPos && (
             <div
-              className="pointer-events-none absolute opacity-70"
+              className={`pointer-events-none absolute ${placement.pendingConfirm ? "opacity-100" : "opacity-70"}`}
               style={{
                 left: placement.placementPos.x,
                 top: placement.placementPos.y,
-                width: 100,
-                height: 100,
+                width: STICKER_SIZE,
+                height: STICKER_SIZE,
                 transform: `rotate(${placement.placementRotation}deg)`,
               }}
             >
@@ -373,8 +392,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                 alt="Sticker preview"
                 className="h-full w-full object-contain"
                 draggable={false}
-                height={100}
-                width={100}
+                height={STICKER_SIZE}
+                width={STICKER_SIZE}
                 unoptimized
               />
             </div>
