@@ -9,7 +9,7 @@
         "y": 180
       },
       "params": {
-        "maxSize": 2048,
+        "maxSize": 1024,
         "fit": "contain"
       },
       "label": "Image Input"
@@ -35,8 +35,8 @@
         "y": 180
       },
       "params": {
-        "size": 2048,
-        "padding": 160
+        "size": 1024,
+        "padding": 80
       },
       "label": "Normalize"
     },
