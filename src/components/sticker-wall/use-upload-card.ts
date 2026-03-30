@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { processStickerImage } from "./process-sticker-image"
+import presetJson from "./sticker.json"
+import type { WorkerMessage } from "./process-sticker-worker"
 
 type UseUploadCardParams = {
   onStickerProcessed: (blob: Blob) => Promise<void>
@@ -13,13 +14,15 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
   const showHelp = expandedCard === "help"
   const showPlace = expandedCard === "place"
   const [uploadProcessing, setUploadProcessing] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
+  const [targetProgress, setTargetProgress] = useState(0)
+  const [stageText, setStageText] = useState("Loading image...")
+  const [processingDone, setProcessingDone] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadDragOver, setUploadDragOver] = useState(false)
   const [pendingBlob, setPendingBlob] = useState<Blob | null>(null)
   const uploadFileInputRef = useRef<HTMLInputElement>(null!)
   const notchRootRef = useRef<HTMLDivElement>(null!)
-  const abortControllerRef = useRef<AbortController | null>(null)
+  const workerRef = useRef<Worker | null>(null)
 
   const openUploadCard = useCallback(() => {
     setExpandedCard("upload")
@@ -29,60 +32,88 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     setExpandedCard("help")
   }, [])
 
-  const handleCardClose = useCallback(() => {
-    // Abort in-flight processing if any
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
+  const terminateWorker = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.terminate()
+      workerRef.current = null
     }
+  }, [])
+
+  const handleCardClose = useCallback(() => {
+    terminateWorker()
     setExpandedCard(null)
     setUploadError(null)
     setUploadDragOver(false)
     setUploadProcessing(false)
-    setUploadProgress(0)
+    setTargetProgress(0)
+    setStageText("Loading image...")
+    setProcessingDone(false)
     setPendingBlob(null)
-  }, [])
+  }, [terminateWorker])
 
   const handleUploadFile = useCallback(
-    async (file: File) => {
+    (file: File) => {
+      const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError("Only PNG, JPEG, and WebP images are allowed.")
+        return
+      }
+
+      terminateWorker()
       setUploadProcessing(true)
-      setUploadProgress(0)
+      setTargetProgress(0)
+      setStageText("Loading image...")
+      setProcessingDone(false)
       setUploadError(null)
 
-      const controller = new AbortController()
-      abortControllerRef.current = controller
+      const worker = new Worker(
+        new URL("./process-sticker-worker.ts", import.meta.url)
+      )
+      workerRef.current = worker
 
-      try {
-        const avifBlob = await processStickerImage(file, {
-          signal: controller.signal,
-          onProgress: setUploadProgress,
-        })
-        // Show "Place sticker" card instead of immediately entering placement
-        setPendingBlob(avifBlob)
-        setExpandedCard("place")
-        setUploadError(null)
-      } catch (err) {
-        // Silently ignore user-initiated abort
-        if (err instanceof DOMException && err.name === "AbortError") return
-        setUploadError(
-          err instanceof Error
-            ? err.message
-            : "Failed to process image. Please try another one."
-        )
-      } finally {
-        setUploadProcessing(false)
-        abortControllerRef.current = null
+      worker.onmessage = async (e: MessageEvent<WorkerMessage>) => {
+        const msg = e.data
+        switch (msg.type) {
+          case "progress":
+            setTargetProgress(msg.progress)
+            setStageText(msg.stage)
+            break
+          case "done":
+            setPendingBlob(msg.blob)
+            setProcessingDone(true)
+            terminateWorker()
+            break
+          case "error":
+            setUploadError(msg.message)
+            setUploadProcessing(false)
+            terminateWorker()
+            break
+        }
       }
+
+      worker.onerror = () => {
+        setUploadError("Failed to process image. Please try another one.")
+        setUploadProcessing(false)
+        terminateWorker()
+      }
+
+      worker.postMessage({ file, preset: presetJson })
     },
-    []
+    [terminateWorker]
   )
+
+  const transitionToPlace = useCallback(() => {
+    setUploadProcessing(false)
+    setProcessingDone(false)
+    setTargetProgress(0)
+    setExpandedCard("place")
+  }, [])
 
   const handlePlaceConfirm = useCallback(async () => {
     if (!pendingBlob) return
     await onStickerProcessed(pendingBlob)
     setExpandedCard(null)
     setPendingBlob(null)
-    setUploadProgress(0)
   }, [pendingBlob, onStickerProcessed])
 
   // Close card on click outside
@@ -100,6 +131,9 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     return () => document.removeEventListener("pointerdown", handler)
   }, [expandedCard, handleCardClose])
 
+  // Clean up worker on unmount
+  useEffect(() => terminateWorker, [terminateWorker])
+
   const clearError = useCallback(() => setUploadError(null), [])
 
   return {
@@ -109,7 +143,9 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     openUploadCard,
     openHelpCard,
     uploadProcessing,
-    uploadProgress,
+    targetProgress,
+    stageText,
+    processingDone,
     uploadError,
     uploadDragOver,
     setUploadDragOver,
@@ -117,6 +153,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     notchRootRef,
     handleCardClose,
     handleUploadFile,
+    transitionToPlace,
     handlePlaceConfirm,
     clearError,
   }

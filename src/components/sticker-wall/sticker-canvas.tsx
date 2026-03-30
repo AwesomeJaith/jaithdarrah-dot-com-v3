@@ -222,7 +222,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           showHelp={upload.showHelp}
           showPlace={upload.showPlace}
           uploadProcessing={upload.uploadProcessing}
-          uploadProgress={upload.uploadProgress}
+          targetProgress={upload.targetProgress}
+          stageText={upload.stageText}
+          processingDone={upload.processingDone}
           uploadError={upload.uploadError}
           uploadDragOver={upload.uploadDragOver}
           setUploadDragOver={upload.setUploadDragOver}
@@ -232,6 +234,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           handleCardClose={upload.handleCardClose}
           handleUploadFile={upload.handleUploadFile}
           handlePlaceStickerClick={handlePlaceStickerClick}
+          transitionToPlace={upload.transitionToPlace}
           handlePlaceConfirm={upload.handlePlaceConfirm}
           handleHelpOpen={upload.openHelpCard}
         />
