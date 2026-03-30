@@ -26,6 +26,14 @@ async function migrate() {
     console.log("effect column already exists")
   }
 
+  // Add alpha_mask column if missing
+  try {
+    await turso.execute(`ALTER TABLE stickers ADD COLUMN alpha_mask TEXT`)
+    console.log("Added alpha_mask column")
+  } catch {
+    console.log("alpha_mask column already exists")
+  }
+
   console.log("Migration complete")
 }
 

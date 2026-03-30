@@ -406,6 +406,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                 sticker={sticker}
                 placementPos={placement.placementPos}
                 placementSize={placement.placementSize}
+                placementAlphaMask={placement.placementAlphaMask}
               />
             ) : (
               <Sticker

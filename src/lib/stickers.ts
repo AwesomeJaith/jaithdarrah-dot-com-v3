@@ -1,6 +1,6 @@
 import { turso } from "@/lib/turso"
 import {
-  computeOverlapRatio,
+  computeAlphaOverlapRatio,
   MAX_OVERLAP_RATIO as DEFAULT_MAX_OVERLAP_RATIO,
 } from "@/lib/overlap"
 
@@ -16,6 +16,7 @@ export type Sticker = {
   width: number
   height: number
   rotation: number
+  alpha_mask: string | null
   status: "pending" | "approved" | "rejected"
   created_at: string
   approved_at: string | null
@@ -82,10 +83,11 @@ export async function createSticker(data: {
   width: number
   height: number
   rotation: number
+  alpha_mask: string | null
 }): Promise<Sticker> {
   const result = await turso.execute({
-    sql: `INSERT INTO stickers (image_url, blur_data_url, username, message, effect, x, y, width, height, rotation)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    sql: `INSERT INTO stickers (image_url, blur_data_url, username, message, effect, x, y, width, height, rotation, alpha_mask)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING *`,
     args: [
       data.image_url,
@@ -98,6 +100,7 @@ export async function createSticker(data: {
       data.width,
       data.height,
       data.rotation,
+      data.alpha_mask,
     ],
   })
   return result.rows[0] as unknown as Sticker
@@ -137,12 +140,13 @@ export async function checkOverlap(
   y: number,
   width: number,
   height: number,
+  alphaMask: string | null = null,
   maxOverlapRatio = DEFAULT_MAX_OVERLAP_RATIO
 ): Promise<boolean> {
   // Query stickers in the vicinity
   const margin = Math.max(width, height)
   const result = await turso.execute({
-    sql: `SELECT x, y, width, height FROM stickers
+    sql: `SELECT x, y, width, height, alpha_mask FROM stickers
           WHERE status IN ('approved', 'pending')
             AND x BETWEEN ? AND ?
             AND y BETWEEN ? AND ?`,
@@ -154,9 +158,21 @@ export async function checkOverlap(
     const sy = Number(row.y)
     const sw = Number(row.width)
     const sh = Number(row.height)
+    const sMask = (row.alpha_mask as string) || null
 
     if (
-      computeOverlapRatio(x, y, width, height, sx, sy, sw, sh) > maxOverlapRatio
+      computeAlphaOverlapRatio(
+        x,
+        y,
+        width,
+        height,
+        alphaMask,
+        sx,
+        sy,
+        sw,
+        sh,
+        sMask
+      ) > maxOverlapRatio
     ) {
       return false // Too much overlap
     }

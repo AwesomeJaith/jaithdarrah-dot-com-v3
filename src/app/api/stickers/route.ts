@@ -61,6 +61,7 @@ export async function POST(request: Request) {
     const width = Number(formData.get("width") ?? 100)
     const height = Number(formData.get("height") ?? 100)
     const rotation = Number(formData.get("rotation") ?? 0)
+    const alphaMask = (formData.get("alpha_mask") as string) || null
 
     if (!image || !username) {
       return NextResponse.json(
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
     }
 
     // Check overlap
-    const allowed = await checkOverlap(x, y, width, height)
+    const allowed = await checkOverlap(x, y, width, height, alphaMask)
     if (!allowed) {
       return NextResponse.json(
         {
@@ -137,6 +138,7 @@ export async function POST(request: Request) {
       width,
       height,
       rotation,
+      alpha_mask: alphaMask,
     })
 
     // Send Discord notification

@@ -6,6 +6,7 @@ export type StickerData = {
   blob: Blob
   imageWidth: number
   imageHeight: number
+  alphaMask: string
   effect: string | null
   username: string
   message: string
@@ -40,7 +41,11 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
   const uploadFileInputRef = useRef<HTMLInputElement>(null!)
   const notchRootRef = useRef<HTMLDivElement>(null!)
   const workerRef = useRef<Worker | null>(null)
-  const pendingDimsRef = useRef<{ width: number; height: number } | null>(null)
+  const pendingDimsRef = useRef<{
+    width: number
+    height: number
+    alphaMask: string
+  } | null>(null)
 
   const openUploadCard = useCallback(() => {
     setExpandedCard("upload")
@@ -102,6 +107,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
             pendingDimsRef.current = {
               width: msg.width,
               height: msg.height,
+              alphaMask: msg.alphaMask,
             }
             setProcessingDone(true)
             terminateWorker()
@@ -144,6 +150,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
       blob: pendingBlob,
       imageWidth: pendingDimsRef.current.width,
       imageHeight: pendingDimsRef.current.height,
+      alphaMask: pendingDimsRef.current.alphaMask,
       effect: null,
       username: username.trim(),
       message: message.trim(),

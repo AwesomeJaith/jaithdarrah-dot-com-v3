@@ -1,5 +1,6 @@
 import presetJson from "./sticker.json"
 import type { PipelineDefinition } from "pipemagic"
+import { encodeAlphaMask } from "@/lib/overlap"
 
 const preset = presetJson as unknown as PipelineDefinition
 
@@ -63,7 +64,7 @@ function trimTransparentPixels(imageData: ImageData): {
 export async function trimAndConvertToAvif(
   blob: Blob,
   signal?: AbortSignal
-): Promise<{ blob: Blob; width: number; height: number }> {
+): Promise<{ blob: Blob; width: number; height: number; alphaMask: string }> {
   if (!avifReady) avifReady = loadAvifEncoder()
   await avifReady
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
@@ -75,12 +76,14 @@ export async function trimAndConvertToAvif(
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
   const fullImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const trimmed = trimTransparentPixels(fullImageData)
+  const alphaMask = encodeAlphaMask(trimmed.imageData)
   const avifBuffer = await avifEncode(trimmed.imageData, { quality: 50 })
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
   return {
     blob: new Blob([avifBuffer], { type: "image/avif" }),
     width: trimmed.width,
     height: trimmed.height,
+    alphaMask,
   }
 }
 
@@ -101,7 +104,7 @@ export type ProcessOptions = {
 export async function processStickerImage(
   file: File,
   options?: ProcessOptions
-): Promise<{ blob: Blob; width: number; height: number }> {
+): Promise<{ blob: Blob; width: number; height: number; alphaMask: string }> {
   const { signal, onProgress } = options ?? {}
 
   const allowedTypes = ["image/png", "image/jpeg", "image/webp"]

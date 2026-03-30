@@ -178,19 +178,16 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
         {/* Sticker image with 3D tilt */}
         <div
           ref={cardRef}
-          className="relative touch-none select-none"
-          style={{
-            perspective: "600px",
-            width: Math.min(sticker.width * 2, 320) + 80,
-            height: Math.min(sticker.height * 2, 320) + 80,
-            padding: 40,
-          }}
+          className="relative flex aspect-square w-80 touch-none items-center justify-center select-none"
+          style={{ perspective: "600px" }}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
         >
           <motion.div
-            className="relative h-full w-full will-change-transform"
+            className="relative will-change-transform"
             style={{
+              width: Math.min(sticker.width * 2, 320),
+              height: Math.min(sticker.height * 2, 320),
               transform: transformStyle,
               transformStyle: "preserve-3d",
               outline: "1px solid transparent",
@@ -237,13 +234,32 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
         {/* Make it rainbow toggle */}
         <button
           onClick={() => setRainbowOverride((v) => !v)}
-          className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-            rainbowOverride
-              ? "border-white/30 bg-white/15 text-white"
-              : "border-white/15 bg-white/5 text-white/60 hover:border-white/25 hover:text-white/80"
+          className={`relative w-44 overflow-hidden rounded-md border border-white/30 px-4 py-1.5 text-sm font-medium text-white transition-colors ${
+            rainbowOverride ? "bg-white/15" : ""
           }`}
+          style={
+            !rainbowOverride
+              ? {
+                  background:
+                    "linear-gradient(90deg, oklch(0.75 0.15 0 / 0.25), oklch(0.75 0.15 60 / 0.25), oklch(0.75 0.15 120 / 0.25), oklch(0.75 0.15 180 / 0.25), oklch(0.75 0.15 240 / 0.25), oklch(0.75 0.15 300 / 0.25), oklch(0.75 0.15 0 / 0.25))",
+                  backgroundSize: "200% 100%",
+                  animation: "rainbow-shimmer 1.5s linear infinite",
+                }
+              : undefined
+          }
         >
-          {rainbowOverride ? "Rainbow!" : "Make it rainbow!"}
+          {!rainbowOverride && (
+            <span
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(-65deg, transparent calc(50% - 4%), oklch(1 0 0 / 0.3) 50%, transparent calc(50% + 4%))",
+                backgroundSize: "200% 100%",
+                animation: "rainbow-shimmer 8s ease-in-out infinite",
+              }}
+            />
+          )}
+          {rainbowOverride ? "Make it normal." : "Make it rainbow!"}
         </button>
 
         {/* Info card */}
@@ -263,7 +279,10 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
 
         {/* Dismiss hint */}
         <p className="text-xs text-white/40">
-          Click outside or press Esc to close
+          <span className="sm:hidden">Tap outside to close</span>
+          <span className="hidden sm:inline">
+            Click outside or press Esc to close
+          </span>
         </p>
       </div>
     </div>

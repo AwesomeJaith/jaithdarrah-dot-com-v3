@@ -4,7 +4,7 @@ import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { cn } from "@/lib/utils"
-import { computeOverlapRatio, MAX_OVERLAP_RATIO } from "@/lib/overlap"
+import { computeAlphaOverlapRatio, MAX_OVERLAP_RATIO } from "@/lib/overlap"
 import { StickerPopup } from "./sticker-popup"
 
 type StickerProps = {
@@ -13,6 +13,7 @@ type StickerProps = {
   disabled?: boolean
   placementPos?: { x: number; y: number } | null
   placementSize?: { width: number; height: number }
+  placementAlphaMask?: string | null
 }
 
 type ApprovedStickerProps = {
@@ -66,22 +67,26 @@ function PendingSticker({
   sticker,
   placementPos,
   placementSize,
+  placementAlphaMask,
 }: {
   sticker: StickerType
   placementPos?: { x: number; y: number } | null
   placementSize?: { width: number; height: number }
+  placementAlphaMask?: string | null
 }) {
   if (!placementPos || !placementSize) return null
 
-  const overlap = computeOverlapRatio(
+  const overlap = computeAlphaOverlapRatio(
     placementPos.x,
     placementPos.y,
     placementSize.width,
     placementSize.height,
+    placementAlphaMask ?? null,
     sticker.x,
     sticker.y,
     sticker.width,
-    sticker.height
+    sticker.height,
+    sticker.alpha_mask
   )
 
   if (overlap <= MAX_OVERLAP_RATIO) return null
@@ -124,6 +129,7 @@ export function Sticker({
   disabled,
   placementPos,
   placementSize,
+  placementAlphaMask,
 }: StickerProps) {
   if (sticker.status === "pending") {
     return (
@@ -131,6 +137,7 @@ export function Sticker({
         sticker={sticker}
         placementPos={placementPos}
         placementSize={placementSize}
+        placementAlphaMask={placementAlphaMask}
       />
     )
   }

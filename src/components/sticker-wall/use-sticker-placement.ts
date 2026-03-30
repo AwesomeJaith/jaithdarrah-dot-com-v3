@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Sticker } from "@/lib/stickers"
-import { computeOverlapRatio, MAX_OVERLAP_RATIO } from "@/lib/overlap"
+import { computeAlphaOverlapRatio, MAX_OVERLAP_RATIO } from "@/lib/overlap"
 import type { StickerData } from "./use-upload-card"
 
 const EDGE_PAN_MARGIN = 50
@@ -62,13 +62,24 @@ function hasClientOverlap(
   y: number,
   width: number,
   height: number,
+  alphaMask: string | null,
   stickers: Map<string, Sticker>
 ): boolean {
   for (const s of stickers.values()) {
     if (s.status === "rejected") continue
     if (
-      computeOverlapRatio(x, y, width, height, s.x, s.y, s.width, s.height) >
-      MAX_OVERLAP_RATIO
+      computeAlphaOverlapRatio(
+        x,
+        y,
+        width,
+        height,
+        alphaMask,
+        s.x,
+        s.y,
+        s.width,
+        s.height,
+        s.alpha_mask
+      ) > MAX_OVERLAP_RATIO
     )
       return true
   }
@@ -109,6 +120,9 @@ export function useStickerPlacement({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [overlapError, setOverlapError] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [placementAlphaMask, setPlacementAlphaMask] = useState<string | null>(
+    null
+  )
   const overlapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -139,6 +153,7 @@ export function useStickerPlacement({
     setPlacementPos(null)
     setPlacementRotation(0)
     setPlacementSize({ width: 100, height: 100 })
+    setPlacementAlphaMask(null)
     stickerDataRef.current = null
     blurDataUrlRef.current = null
     lastPointerScreenRef.current = null
@@ -260,6 +275,7 @@ export function useStickerPlacement({
         pos.y,
         placementSize.width,
         placementSize.height,
+        data.alphaMask,
         currentStickers
       )
     ) {
@@ -284,6 +300,7 @@ export function useStickerPlacement({
       formData.append("width", String(placementSize.width))
       formData.append("height", String(placementSize.height))
       formData.append("rotation", String(placementRotation))
+      formData.append("alpha_mask", data.alphaMask)
 
       const res = await fetch("/api/stickers", {
         method: "POST",
@@ -339,6 +356,7 @@ export function useStickerPlacement({
       setStickerPreviewUrl(url)
       stickerDataRef.current = data
       setPlacementSize(computeStickerSize(data.imageWidth, data.imageHeight))
+      setPlacementAlphaMask(data.alphaMask)
       setIsPlacing(true)
       setPlacementRotation(0)
 
@@ -370,5 +388,6 @@ export function useStickerPlacement({
     onPointerConfirm,
     onWheel,
     setPanZoom,
+    placementAlphaMask,
   }
 }

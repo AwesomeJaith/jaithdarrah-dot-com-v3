@@ -27,7 +27,13 @@ export type WorkerInput = {
 
 export type WorkerMessage =
   | { type: "progress"; progress: number; stage: string }
-  | { type: "done"; blob: Blob; width: number; height: number }
+  | {
+      type: "done"
+      blob: Blob
+      width: number
+      height: number
+      alphaMask: string
+    }
   | { type: "error"; message: string }
 
 function send(msg: WorkerMessage) {
@@ -104,9 +110,29 @@ function trimTransparentPixels(imageData: ImageData): {
   return { imageData: trimmed, width: trimW, height: trimH }
 }
 
+function encodeAlphaMask(imageData: ImageData, gridSize = 16): string {
+  const { data, width, height } = imageData
+  const bytes = new Uint8Array(Math.ceil((gridSize * gridSize) / 8))
+  const cellW = width / gridSize
+  const cellH = height / gridSize
+
+  for (let gy = 0; gy < gridSize; gy++) {
+    for (let gx = 0; gx < gridSize; gx++) {
+      const px = Math.min(Math.floor((gx + 0.5) * cellW), width - 1)
+      const py = Math.min(Math.floor((gy + 0.5) * cellH), height - 1)
+      if (data[(py * width + px) * 4 + 3] > 10) {
+        const bit = gy * gridSize + gx
+        bytes[bit >> 3] |= 1 << (bit & 7)
+      }
+    }
+  }
+
+  return btoa(String.fromCharCode(...bytes))
+}
+
 async function trimAndConvertToAvif(
   blob: Blob
-): Promise<{ blob: Blob; width: number; height: number }> {
+): Promise<{ blob: Blob; width: number; height: number; alphaMask: string }> {
   if (!avifReady) avifReady = loadAvifEncoder()
   await avifReady
   const bitmap = await createImageBitmap(blob)
@@ -116,11 +142,13 @@ async function trimAndConvertToAvif(
   bitmap.close()
   const fullImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const trimmed = trimTransparentPixels(fullImageData)
+  const alphaMask = encodeAlphaMask(trimmed.imageData)
   const avifBuffer = await avifEncode(trimmed.imageData, { quality: 50 })
   return {
     blob: new Blob([avifBuffer], { type: "image/avif" }),
     width: trimmed.width,
     height: trimmed.height,
+    alphaMask,
   }
 }
 
@@ -169,6 +197,7 @@ self.onmessage = async (e: MessageEvent<WorkerInput>) => {
       blob: result.blob,
       width: result.width,
       height: result.height,
+      alphaMask: result.alphaMask,
     })
   } catch (err) {
     send({
