@@ -23,7 +23,7 @@
       },
       "params": {
         "device": "auto",
-        "dtype": "fp16"
+        "dtype": "auto"
       },
       "label": "Remove BG"
     },
