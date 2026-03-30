@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import presetJson from "./sticker.json"
 import type { WorkerMessage } from "./process-sticker-worker"
 
@@ -131,6 +131,17 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     return () => document.removeEventListener("pointerdown", handler)
   }, [expandedCard, handleCardClose])
 
+  // Create object URL for sticker preview, revoke on change/unmount
+  const stickerPreviewUrl = useMemo(
+    () => (pendingBlob ? URL.createObjectURL(pendingBlob) : null),
+    [pendingBlob]
+  )
+  useEffect(() => {
+    return () => {
+      if (stickerPreviewUrl) URL.revokeObjectURL(stickerPreviewUrl)
+    }
+  }, [stickerPreviewUrl])
+
   // Clean up worker on unmount
   useEffect(() => terminateWorker, [terminateWorker])
 
@@ -153,6 +164,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     notchRootRef,
     handleCardClose,
     handleUploadFile,
+    stickerPreviewUrl,
     transitionToPlace,
     handlePlaceConfirm,
     clearError,

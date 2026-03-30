@@ -8,6 +8,7 @@ import { CatLogo } from "@/components/ui/cat-logo"
 import { Progress } from "@/components/ui/progress"
 import { ShimmeringText } from "@/components/ui/shimmering-text"
 import { useInterpolatedProgress } from "./use-interpolated-progress"
+import Image from "next/image"
 
 const MORPH_SPEED = 1
 export const CARD_WIDTH = 320
@@ -35,6 +36,7 @@ type UploadCardProps = {
   handleCardClose: () => void
   handleUploadFile: (file: File) => void
   handlePlaceStickerClick: () => void
+  stickerPreviewUrl: string | null
   transitionToPlace: () => void
   handlePlaceConfirm: () => void
   handleHelpOpen: () => void
@@ -182,6 +184,7 @@ export function UploadCard({
   handleCardClose,
   handleUploadFile,
   handlePlaceStickerClick,
+  stickerPreviewUrl,
   transitionToPlace,
   handlePlaceConfirm,
   handleHelpOpen,
@@ -382,10 +385,16 @@ export function UploadCard({
                 <CloseButton onClick={handleCardClose} />
               </div>
 
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-muted p-3">
-                <p className="text-sm text-muted-foreground">
-                  Your sticker is ready to place on the canvas.
-                </p>
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-lg bg-muted p-3">
+                {stickerPreviewUrl && (
+                  <Image
+                    src={stickerPreviewUrl}
+                    height={100}
+                    width={100}
+                    alt="Your sticker"
+                    className="min-h-0 max-w-full flex-1 object-contain"
+                  />
+                )}
                 <Button size="lg" onClick={handlePlaceConfirm}>
                   Place sticker
                 </Button>

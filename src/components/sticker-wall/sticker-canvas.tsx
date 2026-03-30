@@ -235,6 +235,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           handleUploadFile={upload.handleUploadFile}
           handlePlaceStickerClick={handlePlaceStickerClick}
           transitionToPlace={upload.transitionToPlace}
+          stickerPreviewUrl={upload.stickerPreviewUrl}
           handlePlaceConfirm={upload.handlePlaceConfirm}
           handleHelpOpen={upload.openHelpCard}
         />

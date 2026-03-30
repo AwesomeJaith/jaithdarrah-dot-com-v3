@@ -5,10 +5,10 @@ const _cdn = new Function("u", "return import(u)") as (
 ) => Promise<unknown>
 
 const NODE_WEIGHTS: Record<string, { start: number; end: number }> = {
-  Xlx_HtAq: { start: 0, end: 0.05 },
-  elQUGDvY: { start: 0.05, end: 0.65 },
-  YwZr2ifj: { start: 0.65, end: 0.75 },
-  zb7Z1Xtl: { start: 0.75, end: 0.85 },
+  Xlx_HtAq: { start: 0, end: 0.15 },
+  elQUGDvY: { start: 0.15, end: 0.45 },
+  YwZr2ifj: { start: 0.45, end: 0.65 },
+  zb7Z1Xtl: { start: 0.65, end: 0.85 },
   _VuOKszH: { start: 0.85, end: 0.9 },
 }
 
