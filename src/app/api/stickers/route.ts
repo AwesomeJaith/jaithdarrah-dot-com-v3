@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     const blurDataUrl = formData.get("blur_data_url") as string | null
     const username = formData.get("username") as string | null
     const message = formData.get("message") as string | null
+    const effect = formData.get("effect") as string | null
     const x = Number(formData.get("x"))
     const y = Number(formData.get("y"))
     const width = Number(formData.get("width") ?? 100)
@@ -130,6 +131,7 @@ export async function POST(request: Request) {
       blur_data_url: blurDataUrl || null,
       username: username.trim(),
       message: message?.trim() || null,
+      effect: effect?.trim() || null,
       x,
       y,
       width,

@@ -1,14 +1,17 @@
 "use client"
 
 import Image from "next/image"
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   useMotionValue,
   useMotionTemplate,
   useSpring,
+  useTransform,
   motion,
+  type MotionValue,
 } from "motion/react"
 import type { Sticker } from "@/lib/stickers"
+import { effectMaskStyles, resolveEffect, EFFECT_GRADIENTS } from "./sticker-effects"
 
 type StickerInspectorProps = {
   sticker: Sticker
@@ -17,10 +20,41 @@ type StickerInspectorProps = {
 
 const INTERACT_SPRING = { stiffness: 300, damping: 20 }
 
+/** Pointer-driven holographic gradient overlay */
+function HoloOverlay({
+  effect,
+  glossX,
+  glossY,
+  imageUrl,
+}: {
+  effect: string
+  glossX: MotionValue<number>
+  glossY: MotionValue<number>
+  imageUrl: string
+}) {
+  const gradientFn = EFFECT_GRADIENTS[effect]
+  const holoGradient = useTransform(
+    [glossX, glossY],
+    ([px, py]) => gradientFn(px as number, py as number)
+  )
+  return (
+    <motion.div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        background: holoGradient,
+        ...effectMaskStyles(imageUrl),
+      }}
+    />
+  )
+}
+
 export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const pendingRef = useRef<{ nx: number; ny: number } | null>(null)
   const rafRef = useRef<number | null>(null)
+  const [rainbowOverride, setRainbowOverride] = useState(false)
+
+  const activeEffect = rainbowOverride ? "rainbow" : resolveEffect(sticker.effect)
 
   // Spring-driven tilt and gloss
   const tiltX = useMotionValue(0)
@@ -33,9 +67,14 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
   const springGlossX = useSpring(glossX, INTERACT_SPRING)
   const springGlossY = useSpring(glossY, INTERACT_SPRING)
 
-  // Build the transform and gloss gradient as motion templates
+  // Glare sweep position — maps glossX (15..85) to a wider sweep range (-20..120)
+  // so the glare line can travel fully across the sticker
+  const glareSweep = useTransform(springGlossX, [15, 85], [-20, 120])
+
+  // Build the transform and gloss/holo gradients as motion templates
   const transformStyle = useMotionTemplate`rotateX(${springTiltX}deg) rotateY(${springTiltY}deg)`
   const glossGradient = useMotionTemplate`radial-gradient(circle at ${springGlossX}% ${springGlossY}%, rgba(255,255,255,0.8) 0%, transparent 65%)`
+  const glareGradient = useMotionTemplate`linear-gradient(-65deg, transparent calc(${glareSweep}% - 4%), oklch(1 0 0 / 0.35) ${glareSweep}%, transparent calc(${glareSweep}% + 4%))`
 
   const applyTilt = useCallback(
     (nx: number, ny: number) => {
@@ -160,6 +199,23 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               placeholder={sticker.blur_data_url ? "blur" : "empty"}
               blurDataURL={sticker.blur_data_url ?? undefined}
             />
+            {/* Holographic effect overlay — only for rainbow */}
+            {activeEffect === "rainbow" && (
+              <HoloOverlay
+                effect={activeEffect}
+                glossX={springGlossX}
+                glossY={springGlossY}
+                imageUrl={sticker.image_url}
+              />
+            )}
+            {/* Glare line — pointer-driven shimmer stripe */}
+            <motion.div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: glareGradient,
+                ...effectMaskStyles(sticker.image_url),
+              }}
+            />
             {/* Gloss overlay — masked to sticker shape */}
             <motion.div
               className="pointer-events-none absolute inset-0 rounded-sm opacity-25"
@@ -177,6 +233,18 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
             />
           </motion.div>
         </div>
+
+        {/* Make it rainbow toggle */}
+        <button
+          onClick={() => setRainbowOverride((v) => !v)}
+          className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+            rainbowOverride
+              ? "border-white/30 bg-white/15 text-white"
+              : "border-white/15 bg-white/5 text-white/60 hover:border-white/25 hover:text-white/80"
+          }`}
+        >
+          {rainbowOverride ? "Rainbow!" : "Make it rainbow!"}
+        </button>
 
         {/* Info card */}
         <div className="w-80 animate-in rounded-xl border border-border bg-popover px-5 py-4 text-center shadow-xl duration-200 fade-in slide-in-from-bottom-3">

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import type { Sticker } from "@/lib/stickers"
+import type { StickerData } from "./use-upload-card"
 
 const EDGE_PAN_MARGIN = 50
 const EDGE_PAN_MAX_SPEED = 5
@@ -36,17 +38,31 @@ type PanZoomOutputs = {
 type UseStickerPlacementParams = {
   stickerPreviewUrl: string | null
   setStickerPreviewUrl: (url: string | null) => void
-  stickerBlob: Blob | null
   setStickerBlob: (blob: Blob | null) => void
   setBlurDataUrl: (url: string | null) => void
+  onStickerSubmitted: (sticker: Sticker) => void
+}
+
+async function generateBlurDataUrl(blob: Blob): Promise<string> {
+  const bitmap = await createImageBitmap(blob)
+  const canvas = new OffscreenCanvas(16, 16)
+  const ctx = canvas.getContext("2d")!
+  ctx.drawImage(bitmap, 0, 0, 16, 16)
+  bitmap.close()
+  const tinyBlob = await canvas.convertToBlob({ type: "image/png" })
+  const buffer = await tinyBlob.arrayBuffer()
+  const base64 = btoa(
+    new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), "")
+  )
+  return `data:image/png;base64,${base64}`
 }
 
 export function useStickerPlacement({
   stickerPreviewUrl,
   setStickerPreviewUrl,
-  stickerBlob,
   setStickerBlob,
   setBlurDataUrl,
+  onStickerSubmitted,
 }: UseStickerPlacementParams) {
   const [isPlacing, setIsPlacing] = useState(false)
   const [placementPos, setPlacementPos] = useState<{
@@ -54,7 +70,11 @@ export function useStickerPlacement({
     y: number
   } | null>(null)
   const [placementRotation, setPlacementRotation] = useState(0)
-  const [showCreator, setShowCreator] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Store sticker metadata for auto-submit
+  const stickerDataRef = useRef<StickerData | null>(null)
+  const blurDataUrlRef = useRef<string | null>(null)
 
   const edgePanRafRef = useRef<number | null>(null)
   const lastPointerScreenRef = useRef<{ x: number; y: number } | null>(null)
@@ -133,12 +153,66 @@ export function useStickerPlacement({
   )
 
   const onPointerConfirm = useCallback(
-    (screenX: number, screenY: number) => {
+    async (screenX: number, screenY: number) => {
       const world = panZoomRef.current.screenToWorld(screenX, screenY)
-      setPlacementPos({ x: world.x - 50, y: world.y - 50 })
-      setShowCreator(true)
+      const pos = { x: world.x - 50, y: world.y - 50 }
+      setPlacementPos(pos)
+
+      const data = stickerDataRef.current
+      if (!data || isSubmitting) return
+
+      setIsSubmitting(true)
+
+      try {
+        const blur = blurDataUrlRef.current ?? (await generateBlurDataUrl(data.blob))
+
+        const formData = new FormData()
+        formData.append("image", data.blob, "sticker.avif")
+        formData.append("blur_data_url", blur)
+        formData.append("username", data.username)
+        if (data.message) formData.append("message", data.message)
+        if (data.effect) formData.append("effect", data.effect)
+        formData.append("x", String(pos.x))
+        formData.append("y", String(pos.y))
+        formData.append("width", "100")
+        formData.append("height", "100")
+        formData.append("rotation", String(placementRotation))
+
+        const res = await fetch("/api/stickers", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const errData = await res.json()
+          console.error("Sticker submission failed:", errData.error)
+          setIsSubmitting(false)
+          return
+        }
+
+        const sticker: Sticker = await res.json()
+        onStickerSubmitted(sticker)
+
+        // Reset all state
+        setIsPlacing(false)
+        setPlacementPos(null)
+        setPlacementRotation(0)
+        setStickerBlob(null)
+        setBlurDataUrl(null)
+        stickerDataRef.current = null
+        blurDataUrlRef.current = null
+        lastPointerScreenRef.current = null
+        if (stickerPreviewUrl) {
+          URL.revokeObjectURL(stickerPreviewUrl)
+          setStickerPreviewUrl(null)
+        }
+      } catch (err) {
+        console.error("Sticker submission error:", err)
+      } finally {
+        setIsSubmitting(false)
+      }
     },
-    []
+    [isSubmitting, placementRotation, stickerPreviewUrl, setStickerBlob, setStickerPreviewUrl, setBlurDataUrl, onStickerSubmitted]
   )
 
   const onWheel = useCallback((deltaY: number) => {
@@ -151,6 +225,8 @@ export function useStickerPlacement({
     setPlacementPos(null)
     setPlacementRotation(0)
     setStickerBlob(null)
+    stickerDataRef.current = null
+    blurDataUrlRef.current = null
     lastPointerScreenRef.current = null
     if (stickerPreviewUrl) {
       URL.revokeObjectURL(stickerPreviewUrl)
@@ -158,65 +234,31 @@ export function useStickerPlacement({
     }
   }, [stickerPreviewUrl, setStickerBlob, setStickerPreviewUrl])
 
-  const handleStickerProcessed = useCallback(async (blob: Blob) => {
-    const url = URL.createObjectURL(blob)
-    setStickerBlob(blob)
+  const handleStickerProcessed = useCallback(async (data: StickerData) => {
+    const url = URL.createObjectURL(data.blob)
+    setStickerBlob(data.blob)
     setStickerPreviewUrl(url)
-    setShowCreator(false)
+    stickerDataRef.current = data
     setIsPlacing(true)
     setPlacementRotation(0)
 
     // Generate blur placeholder in the background
     try {
-      const bitmap = await createImageBitmap(blob)
-      const canvas = new OffscreenCanvas(16, 16)
-      const ctx = canvas.getContext("2d")!
-      ctx.drawImage(bitmap, 0, 0, 16, 16)
-      bitmap.close()
-      const tinyBlob = await canvas.convertToBlob({ type: "image/png" })
-      const buffer = await tinyBlob.arrayBuffer()
-      const base64 = btoa(
-        new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), "")
-      )
-      setBlurDataUrl(`data:image/png;base64,${base64}`)
+      const blurUrl = await generateBlurDataUrl(data.blob)
+      setBlurDataUrl(blurUrl)
+      blurDataUrlRef.current = blurUrl
     } catch {
       // Blur generation is best-effort
     }
   }, [setStickerBlob, setStickerPreviewUrl, setBlurDataUrl])
 
-  const handleStickerSubmitted = useCallback(
-    () => {
-      setShowCreator(false)
-      setIsPlacing(false)
-      setPlacementPos(null)
-      setPlacementRotation(0)
-      setStickerBlob(null)
-      setBlurDataUrl(null)
-      lastPointerScreenRef.current = null
-      if (stickerPreviewUrl) {
-        URL.revokeObjectURL(stickerPreviewUrl)
-        setStickerPreviewUrl(null)
-      }
-    },
-    [stickerPreviewUrl, setStickerBlob, setStickerPreviewUrl, setBlurDataUrl]
-  )
-
-  const handleCreatorClose = useCallback(() => {
-    setShowCreator(false)
-    if (!stickerBlob) {
-      setIsPlacing(false)
-    }
-  }, [stickerBlob])
-
   return {
     isPlacing,
     placementPos,
     placementRotation,
-    showCreator,
+    isSubmitting,
     cancelPlacement,
     handleStickerProcessed,
-    handleStickerSubmitted,
-    handleCreatorClose,
     onPointerMove,
     onPointerConfirm,
     onWheel,

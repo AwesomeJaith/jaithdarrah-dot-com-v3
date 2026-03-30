@@ -6,6 +6,7 @@ export type Sticker = {
   blur_data_url: string | null
   username: string
   message: string | null
+  effect: string | null
   x: number
   y: number
   width: number
@@ -56,6 +57,7 @@ export async function createSticker(data: {
   blur_data_url: string | null
   username: string
   message: string | null
+  effect: string | null
   x: number
   y: number
   width: number
@@ -63,14 +65,15 @@ export async function createSticker(data: {
   rotation: number
 }): Promise<Sticker> {
   const result = await turso.execute({
-    sql: `INSERT INTO stickers (image_url, blur_data_url, username, message, x, y, width, height, rotation)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    sql: `INSERT INTO stickers (image_url, blur_data_url, username, message, effect, x, y, width, height, rotation)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING *`,
     args: [
       data.image_url,
       data.blur_data_url,
       data.username,
       data.message,
+      data.effect,
       data.x,
       data.y,
       data.width,

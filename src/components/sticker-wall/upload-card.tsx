@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { FaUpload } from "react-icons/fa6"
 import { Button } from "@/components/ui/button"
@@ -12,9 +12,7 @@ import Image from "next/image"
 
 const MORPH_SPEED = 1
 export const CARD_WIDTH = 320
-const CARD_HEIGHT = 220
 export const CARD_WIDTH_COMPACT = 260
-const CARD_HEIGHT_COMPACT = 200
 
 type UploadCardProps = {
   isPlacing: boolean
@@ -23,6 +21,7 @@ type UploadCardProps = {
   showUpload: boolean
   showHelp: boolean
   showPlace: boolean
+  showMessage: boolean
   uploadProcessing: boolean
   targetProgress: number
   stageText: string
@@ -38,8 +37,13 @@ type UploadCardProps = {
   handlePlaceStickerClick: () => void
   stickerPreviewUrl: string | null
   transitionToPlace: () => void
+  transitionToMessage: () => void
   handlePlaceConfirm: () => void
   handleHelpOpen: () => void
+  username: string
+  setUsername: (v: string) => void
+  message: string
+  setMessage: (v: string) => void
 }
 
 function CloseButton({ onClick }: { onClick: () => void }) {
@@ -164,6 +168,58 @@ function ProcessingDisplay({
   )
 }
 
+/** Reusable card page wrapper with fade animation */
+function CardPage({
+  show,
+  cardWidth,
+  onHeight,
+  children,
+}: {
+  show: boolean
+  cardWidth: number
+  onHeight?: (h: number) => void
+  children: React.ReactNode
+}) {
+  const measureRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = measureRef.current
+    if (!el || !onHeight) return
+    const ro = new ResizeObserver(() => onHeight(el.scrollHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [onHeight])
+
+  return (
+    <div
+      className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
+      style={{
+        width: cardWidth,
+        pointerEvents: show ? "all" : "none",
+        zIndex: show ? 1 : 0,
+      }}
+      ref={measureRef}
+    >
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{
+              duration: 0.15 * MORPH_SPEED,
+              delay: show ? 0.1 * MORPH_SPEED : 0,
+            }}
+            className="flex flex-col gap-3"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export function UploadCard({
   isPlacing,
   isCompact,
@@ -171,6 +227,7 @@ export function UploadCard({
   showUpload,
   showHelp,
   showPlace,
+  showMessage,
   uploadProcessing,
   targetProgress,
   stageText,
@@ -186,12 +243,49 @@ export function UploadCard({
   handlePlaceStickerClick,
   stickerPreviewUrl,
   transitionToPlace,
+  transitionToMessage,
   handlePlaceConfirm,
   handleHelpOpen,
+  username,
+  setUsername,
+  message,
+  setMessage,
 }: UploadCardProps) {
   const cardWidth = isCompact ? CARD_WIDTH_COMPACT : CARD_WIDTH
-  const cardHeight = isCompact ? CARD_HEIGHT_COMPACT : CARD_HEIGHT
-  const isExpanded = showUpload || showHelp || showPlace
+  const isExpanded = showUpload || showHelp || showPlace || showMessage
+
+  // Track measured content heights per page
+  const [pageHeights, setPageHeights] = useState<Record<string, number>>({})
+  const onUploadHeight = useCallback(
+    (h: number) =>
+      setPageHeights((p) => (p.upload === h ? p : { ...p, upload: h })),
+    []
+  )
+  const onHelpHeight = useCallback(
+    (h: number) =>
+      setPageHeights((p) => (p.help === h ? p : { ...p, help: h })),
+    []
+  )
+  const onPlaceHeight = useCallback(
+    (h: number) =>
+      setPageHeights((p) => (p.place === h ? p : { ...p, place: h })),
+    []
+  )
+  const onMessageHeight = useCallback(
+    (h: number) =>
+      setPageHeights((p) => (p.message === h ? p : { ...p, message: h })),
+    []
+  )
+  const activePage = showUpload
+    ? "upload"
+    : showHelp
+      ? "help"
+      : showPlace
+        ? "place"
+        : showMessage
+          ? "message"
+          : null
+  const cardHeight = activePage ? (pageHeights[activePage] ?? 0) : 0
 
   // Measure spacer to get an explicit collapsed width so the spring can
   // interpolate between Cancel-width and Create+Help-width.
@@ -230,179 +324,188 @@ export function UploadCard({
       transition={springTransition}
     >
       {/* Upload card content */}
-      <div
-        className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
-        style={{
-          width: cardWidth,
-          height: cardHeight,
-          pointerEvents: showUpload ? "all" : "none",
-          zIndex: showUpload ? 1 : 0,
-        }}
+      <CardPage
+        show={showUpload}
+        cardWidth={cardWidth}
+        onHeight={onUploadHeight}
       >
-        <AnimatePresence>
-          {showUpload && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{
-                duration: 0.15 * MORPH_SPEED,
-                delay: showUpload ? 0.1 * MORPH_SPEED : 0,
-              }}
-              className="flex h-full flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium">Create your sticker</h2>
-                <CloseButton onClick={handleCardClose} />
-              </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Create your sticker</h2>
+          <CloseButton onClick={handleCardClose} />
+        </div>
 
-              <div
-                className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors ${
-                  uploadDragOver
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-muted-foreground"
-                }`}
-                onClick={() =>
-                  !uploadProcessing && uploadFileInputRef.current?.click()
-                }
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  if (!uploadProcessing) setUploadDragOver(true)
-                }}
-                onDragLeave={() => setUploadDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  setUploadDragOver(false)
-                  if (uploadProcessing) return
-                  const file = e.dataTransfer.files[0]
-                  if (file) handleUploadFile(file)
-                }}
-              >
-                {uploadProcessing ? (
-                  <ProcessingDisplay
-                    targetProgress={targetProgress}
-                    stageText={stageText}
-                    processingDone={processingDone}
-                    onComplete={transitionToPlace}
-                  />
-                ) : (
-                  <>
-                    <FaUpload className="size-5 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      Drag & drop or click
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPEG, or WebP
-                    </p>
-                  </>
-                )}
-              </div>
+        <div
+          className={`grid cursor-pointer rounded-lg border-2 border-dashed transition-colors ${
+            uploadDragOver
+              ? "border-primary bg-primary/5"
+              : "border-border hover:border-muted-foreground"
+          }`}
+          onClick={() =>
+            !uploadProcessing && uploadFileInputRef.current?.click()
+          }
+          onDragOver={(e) => {
+            e.preventDefault()
+            if (!uploadProcessing) setUploadDragOver(true)
+          }}
+          onDragLeave={() => setUploadDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setUploadDragOver(false)
+            if (uploadProcessing) return
+            const file = e.dataTransfer.files[0]
+            if (file) handleUploadFile(file)
+          }}
+        >
+          {/* Both states occupy the same grid cell so the container
+              always matches the taller one's height — no morph. */}
+          <div
+            className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-2 px-6 py-6 transition-opacity"
+            style={{ opacity: uploadProcessing ? 1 : 0, pointerEvents: uploadProcessing ? "auto" : "none" }}
+          >
+            <ProcessingDisplay
+              targetProgress={targetProgress}
+              stageText={stageText}
+              processingDone={processingDone}
+              onComplete={transitionToPlace}
+            />
+          </div>
+          <div
+            className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-2 px-6 py-6 transition-opacity"
+            style={{ opacity: uploadProcessing ? 0 : 1, pointerEvents: uploadProcessing ? "none" : "auto" }}
+          >
+            <FaUpload className="size-6 text-muted-foreground" />
+            <div className="flex flex-col items-center gap-0.5">
+              <p className="text-sm text-muted-foreground">
+                Drag & drop or click
+              </p>
+              <p className="text-xs text-muted-foreground">
+                PNG, JPEG, or WebP
+              </p>
+            </div>
+          </div>
+        </div>
 
-              <input
-                ref={uploadFileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleUploadFile(file)
-                }}
-                className="hidden"
-              />
+        <input
+          ref={uploadFileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) handleUploadFile(file)
+          }}
+          className="hidden"
+        />
 
-              {uploadError && (
-                <p className="text-xs text-destructive">{uploadError}</p>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        {uploadError && (
+          <p className="text-xs text-destructive">{uploadError}</p>
+        )}
+      </CardPage>
 
       {/* Help card content */}
-      <div
-        className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
-        style={{
-          width: cardWidth,
-          height: cardHeight,
-          pointerEvents: showHelp ? "all" : "none",
-          zIndex: showHelp ? 1 : 0,
-        }}
-      >
-        <AnimatePresence>
-          {showHelp && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{
-                duration: 0.15 * MORPH_SPEED,
-                delay: showHelp ? 0.1 * MORPH_SPEED : 0,
-              }}
-              className="flex h-full flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium">How it works</h2>
-                <CloseButton onClick={handleCardClose} />
-              </div>
+      <CardPage show={showHelp} cardWidth={cardWidth} onHeight={onHelpHeight}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">How it works</h2>
+          <CloseButton onClick={handleCardClose} />
+        </div>
 
-              <div className="flex flex-1 flex-col gap-2 rounded-lg bg-muted p-3">
-                <div className="flex h-16 items-center justify-center rounded-md bg-background/50 text-muted-foreground">
-                  <span className="text-xs">Tutorial video coming soon</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Upload an image, click anywhere on the canvas to place it, and
-                  scroll to rotate before placing.
-                </p>
-              </div>
-            </motion.div>
+        <div className="flex flex-1 flex-col gap-2 rounded-lg bg-muted p-3">
+          <div className="flex h-16 items-center justify-center rounded-md bg-background/50 text-muted-foreground">
+            <span className="text-xs">Tutorial video coming soon</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Upload an image, click anywhere on the canvas to place it, and
+            scroll to rotate before placing.
+          </p>
+        </div>
+      </CardPage>
+
+      {/* Preview sticker card content */}
+      <CardPage show={showPlace} cardWidth={cardWidth} onHeight={onPlaceHeight}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Ready!</h2>
+          <CloseButton onClick={handleCardClose} />
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-lg bg-muted p-3">
+          {stickerPreviewUrl && (
+            <Image
+              src={stickerPreviewUrl}
+              height={100}
+              width={100}
+              alt="Your sticker"
+              className="min-h-0 max-w-full flex-1 object-contain"
+            />
           )}
-        </AnimatePresence>
-      </div>
+          <Button size="lg" onClick={transitionToMessage}>
+            Next
+          </Button>
+        </div>
+      </CardPage>
 
-      {/* Place sticker card content */}
-      <div
-        className="absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col gap-3 p-4"
-        style={{
-          width: cardWidth,
-          height: cardHeight,
-          pointerEvents: showPlace ? "all" : "none",
-          zIndex: showPlace ? 1 : 0,
-        }}
+      {/* Message card content */}
+      <CardPage
+        show={showMessage}
+        cardWidth={cardWidth}
+        onHeight={onMessageHeight}
       >
-        <AnimatePresence>
-          {showPlace && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{
-                duration: 0.15 * MORPH_SPEED,
-                delay: showPlace ? 0.1 * MORPH_SPEED : 0,
-              }}
-              className="flex h-full flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium">Ready!</h2>
-                <CloseButton onClick={handleCardClose} />
-              </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Add your info</h2>
+          <CloseButton onClick={handleCardClose} />
+        </div>
 
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-lg bg-muted p-3">
-                {stickerPreviewUrl && (
-                  <Image
-                    src={stickerPreviewUrl}
-                    height={100}
-                    width={100}
-                    alt="Your sticker"
-                    className="min-h-0 max-w-full flex-1 object-contain"
-                  />
-                )}
-                <Button size="lg" onClick={handlePlaceConfirm}>
-                  Place sticker
-                </Button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="notch-username" className="text-xs font-medium">
+                Username
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {username.length}/30
+              </span>
+            </div>
+            <input
+              id="notch-username"
+              type="text"
+              required
+              maxLength={30}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Your name"
+              className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm transition-colors outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="notch-message" className="text-xs font-medium">
+                Message{" "}
+                <span className="text-muted-foreground">(optional)</span>
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {message.length}/200
+              </span>
+            </div>
+            <textarea
+              id="notch-message"
+              maxLength={200}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Leave a message..."
+              rows={3}
+              className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm transition-colors outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+            />
+          </div>
+        </div>
+
+        <Button
+          size="lg"
+          onClick={handlePlaceConfirm}
+          disabled={!username.trim()}
+          className="w-full"
+        >
+          Place sticker
+        </Button>
+      </CardPage>
 
       {/* Invisible spacer — mirrors visible buttons so notch fits snugly */}
       <div

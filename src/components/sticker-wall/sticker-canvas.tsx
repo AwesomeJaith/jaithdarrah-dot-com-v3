@@ -8,7 +8,6 @@ import {
   useState,
 } from "react"
 import { motion } from "motion/react"
-import dynamic from "next/dynamic"
 import Image from "next/image"
 import type { Sticker as StickerType } from "@/lib/stickers"
 import { Sticker } from "./sticker"
@@ -20,14 +19,6 @@ import { useCanvasPanZoom, MIN_SCALE, MAX_SCALE, ZOOM_STEP } from "./use-canvas-
 import { useStickerPlacement } from "./use-sticker-placement"
 import { useUploadCard } from "./use-upload-card"
 import { UploadCard, CARD_WIDTH } from "./upload-card"
-
-const StickerCreator = dynamic(
-  () =>
-    import("./sticker-creator").then((mod) => ({
-      default: mod.StickerCreator,
-    })),
-  { ssr: false }
-)
 
 type StickerCanvasProps = {
   initialStickers: StickerType[]
@@ -52,8 +43,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const stickers = useMemo(() => Array.from(stickerMap.values()), [stickerMap])
 
   // Shared state between placement and upload
-  const [stickerBlob, setStickerBlob] = useState<Blob | null>(null)
-  const [blurDataUrl, setBlurDataUrl] = useState<string | null>(null)
+  const [, setStickerBlob] = useState<Blob | null>(null)
+  const [, setBlurDataUrl] = useState<string | null>(null)
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(null)
 
   // Inspect mode
@@ -70,13 +61,22 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       : false
   )
 
+  // Handle newly submitted sticker
+  const handleStickerSubmitted = useCallback((sticker: StickerType) => {
+    setStickerMap((prev) => {
+      const next = new Map(prev)
+      next.set(sticker.id, sticker)
+      return next
+    })
+  }, [])
+
   // --- Placement hook (called first — pan/zoom receives its outputs) ---
   const placement = useStickerPlacement({
     stickerPreviewUrl,
     setStickerPreviewUrl,
-    stickerBlob,
     setStickerBlob,
     setBlurDataUrl,
+    onStickerSubmitted: handleStickerSubmitted,
   })
 
   // --- Pan/zoom hook (receives placement state + callbacks directly) ---
@@ -221,6 +221,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           showUpload={upload.showUpload}
           showHelp={upload.showHelp}
           showPlace={upload.showPlace}
+          showMessage={upload.showMessage}
           uploadProcessing={upload.uploadProcessing}
           targetProgress={upload.targetProgress}
           stageText={upload.stageText}
@@ -235,9 +236,14 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           handleUploadFile={upload.handleUploadFile}
           handlePlaceStickerClick={handlePlaceStickerClick}
           transitionToPlace={upload.transitionToPlace}
+          transitionToMessage={upload.transitionToMessage}
           stickerPreviewUrl={upload.stickerPreviewUrl}
           handlePlaceConfirm={upload.handlePlaceConfirm}
           handleHelpOpen={upload.openHelpCard}
+          username={upload.username}
+          setUsername={upload.setUsername}
+          message={upload.message}
+          setMessage={upload.setMessage}
         />
       }
       overlays={
@@ -299,7 +305,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           {/* Placement hint */}
           {placement.isPlacing && stickerPreviewUrl && (
             <div className="absolute top-4 left-1/2 z-40 -translate-x-1/2 rounded-lg border border-sticker-border bg-sticker-panel px-4 py-2 text-sm text-popover-foreground shadow-md">
-              Click to place your sticker. Scroll to rotate.
+              {placement.isSubmitting
+                ? "Submitting..."
+                : "Click to place your sticker. Scroll to rotate."}
             </div>
           )}
 
@@ -318,19 +326,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             <StickerInspector
               sticker={inspectedSticker}
               onClose={() => setInspectedSticker(null)}
-            />
-          )}
-
-          {/* Creator modal */}
-          {placement.showCreator && (
-            <StickerCreator
-              onClose={placement.handleCreatorClose}
-              onStickerProcessed={placement.handleStickerProcessed}
-              onStickerSubmitted={placement.handleStickerSubmitted}
-              stickerBlob={stickerBlob}
-              blurDataUrl={blurDataUrl}
-              placementPos={placement.placementPos}
-              placementRotation={placement.placementRotation}
             />
           )}
         </>

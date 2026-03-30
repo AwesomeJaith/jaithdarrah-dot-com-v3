@@ -2,17 +2,30 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import presetJson from "./sticker.json"
 import type { WorkerMessage } from "./process-sticker-worker"
 
-type UseUploadCardParams = {
-  onStickerProcessed: (blob: Blob) => Promise<void>
+export type StickerData = {
+  blob: Blob
+  effect: string | null
+  username: string
+  message: string
 }
 
+type UseUploadCardParams = {
+  onStickerProcessed: (data: StickerData) => Promise<void>
+}
+
+type CardState =
+  | "upload"
+  | "help"
+  | "place"
+  | "message"
+  | null
+
 export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
-  const [expandedCard, setExpandedCard] = useState<
-    "upload" | "help" | "place" | null
-  >(null)
+  const [expandedCard, setExpandedCard] = useState<CardState>(null)
   const showUpload = expandedCard === "upload"
   const showHelp = expandedCard === "help"
   const showPlace = expandedCard === "place"
+  const showMessage = expandedCard === "message"
   const [uploadProcessing, setUploadProcessing] = useState(false)
   const [targetProgress, setTargetProgress] = useState(0)
   const [stageText, setStageText] = useState("Loading image...")
@@ -20,6 +33,13 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadDragOver, setUploadDragOver] = useState(false)
   const [pendingBlob, setPendingBlob] = useState<Blob | null>(null)
+  const [username, setUsername] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("jaith-darrah-sticker-wall-username") ?? ""
+    }
+    return ""
+  })
+  const [message, setMessage] = useState("")
   const uploadFileInputRef = useRef<HTMLInputElement>(null!)
   const notchRootRef = useRef<HTMLDivElement>(null!)
   const workerRef = useRef<Worker | null>(null)
@@ -49,6 +69,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     setStageText("Loading image...")
     setProcessingDone(false)
     setPendingBlob(null)
+    setMessage("")
   }, [terminateWorker])
 
   const handleUploadFile = useCallback(
@@ -109,12 +130,24 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     setExpandedCard("place")
   }, [])
 
+  const transitionToMessage = useCallback(() => {
+    setExpandedCard("message")
+  }, [])
+
   const handlePlaceConfirm = useCallback(async () => {
     if (!pendingBlob) return
-    await onStickerProcessed(pendingBlob)
+    if (!username.trim()) return
+    localStorage.setItem("jaith-darrah-sticker-wall-username", username.trim())
+    await onStickerProcessed({
+      blob: pendingBlob,
+      effect: null,
+      username: username.trim(),
+      message: message.trim(),
+    })
     setExpandedCard(null)
     setPendingBlob(null)
-  }, [pendingBlob, onStickerProcessed])
+    setMessage("")
+  }, [pendingBlob, username, message, onStickerProcessed])
 
   // Close card on click outside
   useEffect(() => {
@@ -151,6 +184,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     showUpload,
     showHelp,
     showPlace,
+    showMessage,
     openUploadCard,
     openHelpCard,
     uploadProcessing,
@@ -166,7 +200,12 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     handleUploadFile,
     stickerPreviewUrl,
     transitionToPlace,
+    transitionToMessage,
     handlePlaceConfirm,
+    username,
+    setUsername,
+    message,
+    setMessage,
     clearError,
   }
 }

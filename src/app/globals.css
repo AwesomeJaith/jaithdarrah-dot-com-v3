@@ -158,6 +158,34 @@
   }
 }
 
+/* Holographic sticker effects */
+
+@layer base {
+  /* Static gradients for wall stickers (no animation) */
+  .sticker-effect-silver {
+    background: linear-gradient(
+      135deg,
+      oklch(0.7 0.01 250 / 0.3) 0%,
+      oklch(0.7 0.01 250 / 0.3) 40%,
+      oklch(0.95 0.01 250 / 0.5) 50%,
+      oklch(0.7 0.01 250 / 0.3) 60%,
+      oklch(0.7 0.01 250 / 0.3) 100%
+    );
+  }
+
+  .sticker-effect-rainbow {
+    background: conic-gradient(
+      from 0deg,
+      oklch(0.75 0.15 25 / 0.2),
+      oklch(0.8 0.15 90 / 0.2),
+      oklch(0.75 0.15 150 / 0.2),
+      oklch(0.8 0.15 220 / 0.2),
+      oklch(0.75 0.15 290 / 0.2),
+      oklch(0.75 0.15 25 / 0.2)
+    );
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root),
   ::view-transition-new(root) {
