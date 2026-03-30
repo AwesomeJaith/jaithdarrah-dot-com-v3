@@ -16,7 +16,7 @@ import {
   MAX_SCALE,
   ZOOM_STEP,
 } from "./use-canvas-pan-zoom"
-import { useStickerPlacement, STICKER_SIZE } from "./use-sticker-placement"
+import { useStickerPlacement } from "./use-sticker-placement"
 import { useUploadCard } from "./use-upload-card"
 import { UploadCard, CARD_WIDTH } from "./upload-card"
 
@@ -40,6 +40,10 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     () => new Map(initialStickers.map((s) => [s.id, s]))
   )
   const stickers = useMemo(() => Array.from(stickerMap.values()), [stickerMap])
+  const stickerMapRef = useRef(stickerMap)
+  useEffect(() => {
+    stickerMapRef.current = stickerMap
+  }, [stickerMap])
 
   // Shared state between placement and upload
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
@@ -76,6 +80,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     stickerPreviewUrl,
     setStickerPreviewUrl,
     onStickerSubmitted: handleStickerSubmitted,
+    stickersRef: stickerMapRef,
   })
 
   // --- Pan/zoom hook (receives placement state + callbacks directly) ---
@@ -193,6 +198,20 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           const data: StickerType[] = await res.json()
           setStickerMap((prev) => {
             const next = new Map(prev)
+            // Remove stickers within these bounds that are no longer returned
+            // (e.g. rejected stickers that were freed up)
+            const returnedIds = new Set(data.map((s) => s.id))
+            for (const [id, s] of next) {
+              if (
+                !returnedIds.has(id) &&
+                s.x + s.width >= bounds.minX &&
+                s.x <= bounds.maxX &&
+                s.y + s.height >= bounds.minY &&
+                s.y <= bounds.maxY
+              ) {
+                next.delete(id)
+              }
+            }
             for (const s of data) {
               next.set(s.id, s)
             }
@@ -304,8 +323,16 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           {/* Placement hint / confirm dialog */}
           {placement.isPlacing && stickerPreviewUrl && (
             <div className="absolute top-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-sticker-border bg-sticker-panel p-1.5 text-sm text-popover-foreground shadow-md">
-              {placement.isSubmitting ? (
+              {placement.submitSuccess ? (
+                <span className="px-2.5 py-0.5 text-brand">
+                  Sticker submitted! It will appear once approved.
+                </span>
+              ) : placement.isSubmitting ? (
                 <span className="px-2.5 py-0.5">Submitting...</span>
+              ) : placement.overlapError ? (
+                <span className="px-2.5 py-0.5 text-destructive">
+                  Too much overlap with another sticker. Try a different spot!
+                </span>
               ) : placement.pendingConfirm ? (
                 <>
                   <span className="pl-2.5">Place here?</span>
@@ -327,16 +354,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                   Click to place your sticker. Scroll to rotate.
                 </span>
               )}
-            </div>
-          )}
-
-          {/* Empty state */}
-          {stickers.length === 0 && !placement.isPlacing && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <p className="text-lg font-medium">No stickers yet!</p>
-                <p className="mt-1 text-sm">Be the first to place one.</p>
-              </div>
             </div>
           )}
 
@@ -370,15 +387,35 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           <div className="absolute -top-4 -left-px h-8 w-0.5 bg-border" />
           <div className="absolute -top-px -left-4 h-0.5 w-8 bg-border" />
 
+          {/* Empty state — centered above the origin crosshair */}
+          {stickers.length === 0 && !placement.isPlacing && (
+            <div
+              className="absolute -translate-x-1/2 text-center whitespace-nowrap text-muted-foreground"
+              style={{ left: 0, bottom: 40 }}
+            >
+              <p className="text-lg font-medium">No stickers yet!</p>
+              <p className="mt-1 text-sm">Be the first to place one.</p>
+            </div>
+          )}
+
           {/* Placed stickers */}
-          {stickers.map((sticker) => (
-            <Sticker
-              key={sticker.id}
-              sticker={sticker}
-              onInspect={setInspectedSticker}
-              disabled={placement.isPlacing && !!stickerPreviewUrl}
-            />
-          ))}
+          {stickers.map((sticker) =>
+            sticker.status === "pending" ? (
+              <Sticker
+                key={sticker.id}
+                sticker={sticker}
+                placementPos={placement.placementPos}
+                placementSize={placement.placementSize}
+              />
+            ) : (
+              <Sticker
+                key={sticker.id}
+                sticker={sticker}
+                onInspect={setInspectedSticker}
+                disabled={placement.isPlacing && !!stickerPreviewUrl}
+              />
+            )
+          )}
 
           {/* Placement preview */}
           {placement.isPlacing &&
@@ -389,18 +426,18 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                 style={{
                   left: placement.placementPos.x,
                   top: placement.placementPos.y,
-                  width: STICKER_SIZE,
-                  height: STICKER_SIZE,
+                  width: placement.placementSize.width,
+                  height: placement.placementSize.height,
                   transform: `rotate(${placement.placementRotation}deg)`,
                 }}
               >
                 <Image
                   src={stickerPreviewUrl}
                   alt="Sticker preview"
-                  className="h-full w-full object-contain"
+                  className="object-contain"
                   draggable={false}
-                  height={STICKER_SIZE}
-                  width={STICKER_SIZE}
+                  fill
+                  sizes={`${placement.placementSize.width}px`}
                   unoptimized
                 />
               </div>

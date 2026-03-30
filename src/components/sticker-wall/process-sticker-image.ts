@@ -23,10 +23,47 @@ async function loadAvifEncoder() {
   avifEncode = mod.default
 }
 
-export async function convertToAvif(
+function trimTransparentPixels(imageData: ImageData): {
+  imageData: ImageData
+  width: number
+  height: number
+} {
+  const { data, width, height } = imageData
+  let minX = width,
+    minY = height,
+    maxX = 0,
+    maxY = 0
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] > 10) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    return { imageData: new ImageData(1, 1), width: 1, height: 1 }
+  }
+
+  const trimW = maxX - minX + 1
+  const trimH = maxY - minY + 1
+  const trimmed = new ImageData(trimW, trimH)
+  for (let y = 0; y < trimH; y++) {
+    const srcOffset = ((minY + y) * width + minX) * 4
+    const dstOffset = y * trimW * 4
+    trimmed.data.set(data.subarray(srcOffset, srcOffset + trimW * 4), dstOffset)
+  }
+  return { imageData: trimmed, width: trimW, height: trimH }
+}
+
+export async function trimAndConvertToAvif(
   blob: Blob,
   signal?: AbortSignal
-): Promise<Blob> {
+): Promise<{ blob: Blob; width: number; height: number }> {
   if (!avifReady) avifReady = loadAvifEncoder()
   await avifReady
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
@@ -36,10 +73,15 @@ export async function convertToAvif(
   ctx.drawImage(bitmap, 0, 0)
   bitmap.close()
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const avifBuffer = await avifEncode(imageData, { quality: 50 })
+  const fullImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const trimmed = trimTransparentPixels(fullImageData)
+  const avifBuffer = await avifEncode(trimmed.imageData, { quality: 50 })
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
-  return new Blob([avifBuffer], { type: "image/avif" })
+  return {
+    blob: new Blob([avifBuffer], { type: "image/avif" }),
+    width: trimmed.width,
+    height: trimmed.height,
+  }
 }
 
 // Node weights for progress reporting (cumulative ranges 0–1)
@@ -59,7 +101,7 @@ export type ProcessOptions = {
 export async function processStickerImage(
   file: File,
   options?: ProcessOptions
-): Promise<Blob> {
+): Promise<{ blob: Blob; width: number; height: number }> {
   const { signal, onProgress } = options ?? {}
 
   const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
@@ -95,7 +137,7 @@ export async function processStickerImage(
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
   onProgress?.(0.9)
 
-  const avifBlob = await convertToAvif(blob, signal)
+  const result = await trimAndConvertToAvif(blob, signal)
   onProgress?.(1)
-  return avifBlob
+  return result
 }

@@ -440,6 +440,7 @@ export function UploadCard({
               width={100}
               alt="Your sticker"
               className="min-h-0 max-w-full flex-1 object-contain"
+              style={{ height: "auto" }}
             />
           )}
           <Button size="lg" className="w-full" onClick={transitionToMessage}>

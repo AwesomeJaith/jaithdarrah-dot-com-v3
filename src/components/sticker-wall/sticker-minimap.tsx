@@ -188,27 +188,41 @@ export function StickerMinimap({
         />
 
         {/* Sticker thumbnails */}
-        {stickers.map((sticker) => {
-          const sx = (sticker.x - worldBounds.minX) * mapScale + offsetX
-          const sy = (sticker.y - worldBounds.minY) * mapScale + offsetY
-          const sw = Math.max(sticker.width * mapScale, 2)
-          const sh = Math.max(sticker.height * mapScale, 2)
-          const cx = sx + sw / 2
-          const cy = sy + sh / 2
+        {stickers
+          .filter((s) => s.status === "approved")
+          .map((sticker) => {
+            const sx = (sticker.x - worldBounds.minX) * mapScale + offsetX
+            const sy = (sticker.y - worldBounds.minY) * mapScale + offsetY
+            const sw = Math.max(sticker.width * mapScale, 2)
+            const sh = Math.max(sticker.height * mapScale, 2)
+            const cx = sx + sw / 2
+            const cy = sy + sh / 2
 
-          return (
-            <image
-              key={sticker.id}
-              href={sticker.blur_data_url ?? sticker.image_url}
-              x={sx}
-              y={sy}
-              width={sw}
-              height={sh}
-              transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
-              preserveAspectRatio="xMidYMid meet"
-            />
-          )
-        })}
+            const href = sticker.blur_data_url || sticker.image_url
+
+            return href ? (
+              <image
+                key={sticker.id}
+                href={href}
+                x={sx}
+                y={sy}
+                width={sw}
+                height={sh}
+                transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
+                preserveAspectRatio="xMidYMid meet"
+              />
+            ) : (
+              <rect
+                key={sticker.id}
+                x={sx}
+                y={sy}
+                width={sw}
+                height={sh}
+                transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
+                className="fill-muted-foreground/20"
+              />
+            )
+          })}
 
         {/* Viewport indicator */}
         {viewport && (

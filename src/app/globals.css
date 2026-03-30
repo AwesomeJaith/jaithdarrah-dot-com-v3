@@ -41,6 +41,7 @@
   --color-background: var(--background);
   --color-sticker-canvas: var(--sticker-canvas);
   --color-sticker-panel: var(--sticker-panel);
+  --color-brand: var(--brand);
   --color-sticker-border: var(--sticker-border);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -77,6 +78,7 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
+  --brand: oklch(0.791 0.174 152.5);
   --sticker-canvas: oklch(0.95 0 0);
   --sticker-panel: oklch(0.93 0 0);
   --sticker-border: oklch(0.767 0 20);
@@ -114,6 +116,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  --brand: oklch(0.791 0.174 152.5);
   --sticker-canvas: oklch(0.269 0 0 / 30%);
   --sticker-panel: oklch(0.205 0 0);
   --sticker-border: oklch(1 0 0 / 10%);
@@ -207,7 +210,7 @@
     scrollbar-color: var(--muted-foreground) transparent;
   }
   ::selection {
-    background-color: #4cda82;
+    background-color: var(--brand);
     color: #212121;
   }
 }

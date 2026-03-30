@@ -3,9 +3,19 @@
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import type { Sticker as StickerType } from "@/lib/stickers"
+import { cn } from "@/lib/utils"
+import { computeOverlapRatio, MAX_OVERLAP_RATIO } from "@/lib/overlap"
 import { StickerPopup } from "./sticker-popup"
 
 type StickerProps = {
+  sticker: StickerType
+  onInspect?: (sticker: StickerType) => void
+  disabled?: boolean
+  placementPos?: { x: number; y: number } | null
+  placementSize?: { width: number; height: number }
+}
+
+type ApprovedStickerProps = {
   sticker: StickerType
   onInspect?: (sticker: StickerType) => void
   disabled?: boolean
@@ -52,7 +62,92 @@ function isOpaqueAt(
   return alphaMap.alpha[mapY * alphaMap.width + mapX] > 10
 }
 
-export function Sticker({ sticker, onInspect, disabled }: StickerProps) {
+function PendingSticker({
+  sticker,
+  placementPos,
+  placementSize,
+}: {
+  sticker: StickerType
+  placementPos?: { x: number; y: number } | null
+  placementSize?: { width: number; height: number }
+}) {
+  if (!placementPos || !placementSize) return null
+
+  const overlap = computeOverlapRatio(
+    placementPos.x,
+    placementPos.y,
+    placementSize.width,
+    placementSize.height,
+    sticker.x,
+    sticker.y,
+    sticker.width,
+    sticker.height
+  )
+
+  if (overlap <= MAX_OVERLAP_RATIO) return null
+
+  return (
+    <div
+      className="absolute flex items-center justify-center rounded-lg"
+      style={{
+        left: sticker.x,
+        top: sticker.y,
+        width: sticker.width,
+        height: sticker.height,
+        transform: `rotate(${sticker.rotation}deg)`,
+        backgroundColor: "oklch(0.5 0 0 / 0.15)",
+      }}
+    >
+      <div className="absolute -top-8 left-1/2 z-50 -translate-x-1/2 rounded-md bg-popover px-2 py-1 text-xs whitespace-nowrap text-popover-foreground shadow-md">
+        This spot is reserved
+      </div>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="text-primary opacity-60"
+      >
+        <path
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"
+          fill="currentColor"
+        />
+      </svg>
+    </div>
+  )
+}
+
+export function Sticker({
+  sticker,
+  onInspect,
+  disabled,
+  placementPos,
+  placementSize,
+}: StickerProps) {
+  if (sticker.status === "pending") {
+    return (
+      <PendingSticker
+        sticker={sticker}
+        placementPos={placementPos}
+        placementSize={placementSize}
+      />
+    )
+  }
+  return (
+    <ApprovedSticker
+      sticker={sticker}
+      onInspect={onInspect}
+      disabled={disabled}
+    />
+  )
+}
+
+function ApprovedSticker({
+  sticker,
+  onInspect,
+  disabled,
+}: ApprovedStickerProps) {
   const [hovered, setHovered] = useState(false)
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
   const divRef = useRef<HTMLDivElement>(null)
@@ -113,7 +208,10 @@ export function Sticker({ sticker, onInspect, disabled }: StickerProps) {
   return (
     <div
       ref={divRef}
-      className={`group absolute animate-pop-in select-none${disabled ? "pointer-events-none" : ""}`}
+      className={cn(
+        "group absolute animate-pop-in select-none",
+        disabled && "pointer-events-none"
+      )}
       onDragStart={(e) => e.preventDefault()}
       style={{
         left: sticker.x,

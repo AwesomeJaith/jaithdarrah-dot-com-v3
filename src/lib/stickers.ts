@@ -1,4 +1,8 @@
 import { turso } from "@/lib/turso"
+import {
+  computeOverlapRatio,
+  MAX_OVERLAP_RATIO as DEFAULT_MAX_OVERLAP_RATIO,
+} from "@/lib/overlap"
 
 export type Sticker = {
   id: string
@@ -25,7 +29,7 @@ export async function getStickersByViewport(
 ): Promise<Sticker[]> {
   const result = await turso.execute({
     sql: `SELECT * FROM stickers
-          WHERE status = 'approved'
+          WHERE status IN ('approved', 'pending')
             AND x + width >= ?
             AND x <= ?
             AND y + height >= ?
@@ -33,7 +37,22 @@ export async function getStickersByViewport(
           ORDER BY created_at ASC`,
     args: [minX, maxX, minY, maxY],
   })
-  return result.rows as unknown as Sticker[]
+  const rows = result.rows as unknown as Sticker[]
+  // Strip personal/image data from pending stickers
+  return rows.map((s) =>
+    s.status === "pending"
+      ? {
+          ...s,
+          image_url: "",
+          blur_data_url: null,
+          username: "",
+          message: null,
+          effect: null,
+          created_at: "",
+          approved_at: null,
+        }
+      : s
+  )
 }
 
 export async function getAllApprovedStickers(): Promise<Sticker[]> {
@@ -118,23 +137,17 @@ export async function checkOverlap(
   y: number,
   width: number,
   height: number,
-  maxOverlapRatio = 0.5
+  maxOverlapRatio = DEFAULT_MAX_OVERLAP_RATIO
 ): Promise<boolean> {
   // Query stickers in the vicinity
   const margin = Math.max(width, height)
   const result = await turso.execute({
     sql: `SELECT x, y, width, height FROM stickers
-          WHERE status = 'approved'
+          WHERE status IN ('approved', 'pending')
             AND x BETWEEN ? AND ?
             AND y BETWEEN ? AND ?`,
     args: [x - margin, x + margin, y - margin, y + margin],
   })
-
-  const newLeft = x
-  const newRight = x + width
-  const newTop = y
-  const newBottom = y + height
-  const newArea = width * height
 
   for (const row of result.rows) {
     const sx = Number(row.x)
@@ -142,17 +155,9 @@ export async function checkOverlap(
     const sw = Number(row.width)
     const sh = Number(row.height)
 
-    const overlapX = Math.max(
-      0,
-      Math.min(newRight, sx + sw) - Math.max(newLeft, sx)
-    )
-    const overlapY = Math.max(
-      0,
-      Math.min(newBottom, sy + sh) - Math.max(newTop, sy)
-    )
-    const overlapArea = overlapX * overlapY
-
-    if (overlapArea / newArea > maxOverlapRatio) {
+    if (
+      computeOverlapRatio(x, y, width, height, sx, sy, sw, sh) > maxOverlapRatio
+    ) {
       return false // Too much overlap
     }
   }

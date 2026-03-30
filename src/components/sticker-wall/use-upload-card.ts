@@ -4,6 +4,8 @@ import type { WorkerMessage } from "./process-sticker-worker"
 
 export type StickerData = {
   blob: Blob
+  imageWidth: number
+  imageHeight: number
   effect: string | null
   username: string
   message: string
@@ -38,6 +40,7 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
   const uploadFileInputRef = useRef<HTMLInputElement>(null!)
   const notchRootRef = useRef<HTMLDivElement>(null!)
   const workerRef = useRef<Worker | null>(null)
+  const pendingDimsRef = useRef<{ width: number; height: number } | null>(null)
 
   const openUploadCard = useCallback(() => {
     setExpandedCard("upload")
@@ -96,6 +99,10 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
             break
           case "done":
             setPendingBlob(msg.blob)
+            pendingDimsRef.current = {
+              width: msg.width,
+              height: msg.height,
+            }
             setProcessingDone(true)
             terminateWorker()
             break
@@ -130,11 +137,13 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
   }, [])
 
   const handlePlaceConfirm = useCallback(async () => {
-    if (!pendingBlob) return
+    if (!pendingBlob || !pendingDimsRef.current) return
     if (!username.trim()) return
     localStorage.setItem("jaith-darrah-sticker-wall-username", username.trim())
     await onStickerProcessed({
       blob: pendingBlob,
+      imageWidth: pendingDimsRef.current.width,
+      imageHeight: pendingDimsRef.current.height,
       effect: null,
       username: username.trim(),
       message: message.trim(),

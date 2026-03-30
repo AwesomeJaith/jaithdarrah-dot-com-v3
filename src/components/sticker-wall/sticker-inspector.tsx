@@ -181,8 +181,9 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
           className="relative touch-none select-none"
           style={{
             perspective: "600px",
-            width: Math.min(sticker.width * 2, 320),
-            height: Math.min(sticker.height * 2, 320),
+            width: Math.min(sticker.width * 2, 320) + 80,
+            height: Math.min(sticker.height * 2, 320) + 80,
+            padding: 40,
           }}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
@@ -199,6 +200,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               src={sticker.image_url}
               alt={`Sticker by ${sticker.username}`}
               fill
+              sizes="320px"
               className="object-contain drop-shadow-2xl"
               draggable={false}
               placeholder={sticker.blur_data_url ? "blur" : "empty"}
