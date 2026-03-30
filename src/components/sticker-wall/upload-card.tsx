@@ -360,7 +360,10 @@ export function UploadCard({
               always matches the taller one's height — no morph. */}
           <div
             className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-2 px-6 py-6 transition-opacity"
-            style={{ opacity: uploadProcessing ? 1 : 0, pointerEvents: uploadProcessing ? "auto" : "none" }}
+            style={{
+              opacity: uploadProcessing ? 1 : 0,
+              pointerEvents: uploadProcessing ? "auto" : "none",
+            }}
           >
             <ProcessingDisplay
               targetProgress={targetProgress}
@@ -371,7 +374,10 @@ export function UploadCard({
           </div>
           <div
             className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-2 px-6 py-6 transition-opacity"
-            style={{ opacity: uploadProcessing ? 0 : 1, pointerEvents: uploadProcessing ? "none" : "auto" }}
+            style={{
+              opacity: uploadProcessing ? 0 : 1,
+              pointerEvents: uploadProcessing ? "none" : "auto",
+            }}
           >
             <FaUpload className="size-6 text-muted-foreground" />
             <div className="flex flex-col items-center gap-0.5">

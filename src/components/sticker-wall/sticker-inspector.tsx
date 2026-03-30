@@ -11,7 +11,11 @@ import {
   type MotionValue,
 } from "motion/react"
 import type { Sticker } from "@/lib/stickers"
-import { effectMaskStyles, resolveEffect, EFFECT_GRADIENTS } from "./sticker-effects"
+import {
+  effectMaskStyles,
+  resolveEffect,
+  EFFECT_GRADIENTS,
+} from "./sticker-effects"
 
 type StickerInspectorProps = {
   sticker: Sticker
@@ -33,9 +37,8 @@ function HoloOverlay({
   imageUrl: string
 }) {
   const gradientFn = EFFECT_GRADIENTS[effect]
-  const holoGradient = useTransform(
-    [glossX, glossY],
-    ([px, py]) => gradientFn(px as number, py as number)
+  const holoGradient = useTransform([glossX, glossY], ([px, py]) =>
+    gradientFn(px as number, py as number)
   )
   return (
     <motion.div
@@ -54,7 +57,9 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
   const rafRef = useRef<number | null>(null)
   const [rainbowOverride, setRainbowOverride] = useState(false)
 
-  const activeEffect = rainbowOverride ? "rainbow" : resolveEffect(sticker.effect)
+  const activeEffect = rainbowOverride
+    ? "rainbow"
+    : resolveEffect(sticker.effect)
 
   // Spring-driven tilt and gloss
   const tiltX = useMotionValue(0)

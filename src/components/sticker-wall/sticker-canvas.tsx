@@ -1,12 +1,6 @@
 "use client"
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { motion } from "motion/react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -16,7 +10,12 @@ import { StickerInspector } from "./sticker-inspector"
 import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
 import { NotchFrame } from "@/components/ui/notch-frame"
-import { useCanvasPanZoom, MIN_SCALE, MAX_SCALE, ZOOM_STEP } from "./use-canvas-pan-zoom"
+import {
+  useCanvasPanZoom,
+  MIN_SCALE,
+  MAX_SCALE,
+  ZOOM_STEP,
+} from "./use-canvas-pan-zoom"
 import { useStickerPlacement, STICKER_SIZE } from "./use-sticker-placement"
 import { useUploadCard } from "./use-upload-card"
 import { UploadCard, CARD_WIDTH } from "./upload-card"
@@ -36,7 +35,6 @@ export const NOTCH_PAD = 6
 const COMPACT_BREAKPOINT =
   CARD_WIDTH + NOTCH_PAD * 2 + (MINIMAP_DEFAULT_SIZE + TOOLBAR_MARGIN * 2) * 2
 
-
 export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [stickerMap, setStickerMap] = useState<Map<string, StickerType>>(
     () => new Map(initialStickers.map((s) => [s.id, s]))
@@ -44,10 +42,14 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const stickers = useMemo(() => Array.from(stickerMap.values()), [stickerMap])
 
   // Shared state between placement and upload
-  const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(null)
+  const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
+    null
+  )
 
   // Inspect mode
-  const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(null)
+  const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(
+    null
+  )
 
   // Layout measurement
   const notchBarRef = useRef<HTMLDivElement>(null!)
@@ -321,7 +323,9 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                   </div>
                 </>
               ) : (
-                <span className="px-2.5 py-0.5">Click to place your sticker. Scroll to rotate.</span>
+                <span className="px-2.5 py-0.5">
+                  Click to place your sticker. Scroll to rotate.
+                </span>
               )}
             </div>
           )}
@@ -351,7 +355,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         ref={containerRef}
         className="h-full w-full cursor-grab touch-none overflow-hidden rounded-xl active:cursor-grabbing"
         style={{
-          ...(placement.isPlacing && stickerPreviewUrl && { cursor: "crosshair" }),
+          ...(placement.isPlacing &&
+            stickerPreviewUrl && { cursor: "crosshair" }),
         }}
         {...pointerHandlers}
       >
@@ -376,28 +381,30 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           ))}
 
           {/* Placement preview */}
-          {placement.isPlacing && stickerPreviewUrl && placement.placementPos && (
-            <div
-              className={`pointer-events-none absolute ${placement.pendingConfirm ? "opacity-100" : "opacity-70"}`}
-              style={{
-                left: placement.placementPos.x,
-                top: placement.placementPos.y,
-                width: STICKER_SIZE,
-                height: STICKER_SIZE,
-                transform: `rotate(${placement.placementRotation}deg)`,
-              }}
-            >
-              <Image
-                src={stickerPreviewUrl}
-                alt="Sticker preview"
-                className="h-full w-full object-contain"
-                draggable={false}
-                height={STICKER_SIZE}
-                width={STICKER_SIZE}
-                unoptimized
-              />
-            </div>
-          )}
+          {placement.isPlacing &&
+            stickerPreviewUrl &&
+            placement.placementPos && (
+              <div
+                className={`pointer-events-none absolute ${placement.pendingConfirm ? "opacity-100" : "opacity-70"}`}
+                style={{
+                  left: placement.placementPos.x,
+                  top: placement.placementPos.y,
+                  width: STICKER_SIZE,
+                  height: STICKER_SIZE,
+                  transform: `rotate(${placement.placementRotation}deg)`,
+                }}
+              >
+                <Image
+                  src={stickerPreviewUrl}
+                  alt="Sticker preview"
+                  className="h-full w-full object-contain"
+                  draggable={false}
+                  height={STICKER_SIZE}
+                  width={STICKER_SIZE}
+                  unoptimized
+                />
+              </div>
+            )}
         </div>
       </div>
     </NotchFrame>

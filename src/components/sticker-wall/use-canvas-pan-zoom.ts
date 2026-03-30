@@ -209,28 +209,21 @@ export function useCanvasPanZoom({
     [setScale]
   )
 
-  const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      const wasPinching = pinchRef.current !== null
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    const wasPinching = pinchRef.current !== null
 
-      pointersRef.current.delete(e.pointerId)
-      if (pointersRef.current.size < 2) {
-        pinchRef.current = null
-      }
+    pointersRef.current.delete(e.pointerId)
+    if (pointersRef.current.size < 2) {
+      pinchRef.current = null
+    }
 
-      if (
-        placementActiveRef.current &&
-        !isPanningRef.current &&
-        !wasPinching
-      ) {
-        placementConfirmRef.current?.(e.clientX, e.clientY)
-      }
+    if (placementActiveRef.current && !isPanningRef.current && !wasPinching) {
+      placementConfirmRef.current?.(e.clientX, e.clientY)
+    }
 
-      isPanningRef.current = false
-      panPendingRef.current = false
-    },
-    []
-  )
+    isPanningRef.current = false
+    panPendingRef.current = false
+  }, [])
 
   const handleWheel = useCallback(
     (e: WheelEvent) => {

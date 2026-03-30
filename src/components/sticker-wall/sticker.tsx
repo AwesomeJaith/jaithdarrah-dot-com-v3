@@ -113,7 +113,7 @@ export function Sticker({ sticker, onInspect, disabled }: StickerProps) {
   return (
     <div
       ref={divRef}
-      className={`group absolute animate-pop-in select-none${disabled ? " pointer-events-none" : ""}`}
+      className={`group absolute animate-pop-in select-none${disabled ? "pointer-events-none" : ""}`}
       onDragStart={(e) => e.preventDefault()}
       style={{
         left: sticker.x,

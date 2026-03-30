@@ -80,7 +80,10 @@ export function NotchFrame({
   return (
     <div
       ref={containerRef}
-      className={cn("relative h-full w-full overflow-hidden rounded-xl", className)}
+      className={cn(
+        "relative h-full w-full overflow-hidden rounded-xl",
+        className
+      )}
     >
       {/* Clipped content area */}
       <div

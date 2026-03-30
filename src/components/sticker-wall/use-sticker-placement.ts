@@ -181,78 +181,88 @@ export function useStickerPlacement({
     setPendingConfirm(false)
   }, [])
 
-  const confirmPlacement = useCallback(
-    async () => {
-      const data = stickerDataRef.current
-      const pos = placementPos
-      if (!data || !pos || isSubmitting) return
+  const confirmPlacement = useCallback(async () => {
+    const data = stickerDataRef.current
+    const pos = placementPos
+    if (!data || !pos || isSubmitting) return
 
-      setIsSubmitting(true)
+    setIsSubmitting(true)
 
-      try {
-        const blur = blurDataUrlRef.current ?? (await generateBlurDataUrl(data.blob))
+    try {
+      const blur =
+        blurDataUrlRef.current ?? (await generateBlurDataUrl(data.blob))
 
-        const formData = new FormData()
-        formData.append("image", data.blob, "sticker.avif")
-        formData.append("blur_data_url", blur)
-        formData.append("username", data.username)
-        if (data.message) formData.append("message", data.message)
-        if (data.effect) formData.append("effect", data.effect)
-        formData.append("x", String(pos.x))
-        formData.append("y", String(pos.y))
-        formData.append("width", String(STICKER_SIZE))
-        formData.append("height", String(STICKER_SIZE))
-        formData.append("rotation", String(placementRotation))
+      const formData = new FormData()
+      formData.append("image", data.blob, "sticker.avif")
+      formData.append("blur_data_url", blur)
+      formData.append("username", data.username)
+      if (data.message) formData.append("message", data.message)
+      if (data.effect) formData.append("effect", data.effect)
+      formData.append("x", String(pos.x))
+      formData.append("y", String(pos.y))
+      formData.append("width", String(STICKER_SIZE))
+      formData.append("height", String(STICKER_SIZE))
+      formData.append("rotation", String(placementRotation))
 
-        const res = await fetch("/api/stickers", {
-          method: "POST",
-          body: formData,
-        })
+      const res = await fetch("/api/stickers", {
+        method: "POST",
+        body: formData,
+      })
 
-        if (!res.ok) {
-          const errData = await res.json()
-          console.error("Sticker submission failed:", errData.error)
-          setIsSubmitting(false)
-          return
-        }
-
-        const sticker: Sticker = await res.json()
-        onStickerSubmitted(sticker)
-        resetAll()
-      } catch (err) {
-        console.error("Sticker submission error:", err)
-      } finally {
+      if (!res.ok) {
+        const errData = await res.json()
+        console.error("Sticker submission failed:", errData.error)
         setIsSubmitting(false)
+        return
       }
-    },
-    [isSubmitting, placementPos, placementRotation, resetAll, onStickerSubmitted]
-  )
 
-  const onWheel = useCallback((deltaY: number) => {
-    if (pendingConfirm) return
-    const delta = deltaY > 0 ? 5 : -5
-    setPlacementRotation((prev) => prev + delta)
-  }, [pendingConfirm])
+      const sticker: Sticker = await res.json()
+      onStickerSubmitted(sticker)
+      resetAll()
+    } catch (err) {
+      console.error("Sticker submission error:", err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [
+    isSubmitting,
+    placementPos,
+    placementRotation,
+    resetAll,
+    onStickerSubmitted,
+  ])
+
+  const onWheel = useCallback(
+    (deltaY: number) => {
+      if (pendingConfirm) return
+      const delta = deltaY > 0 ? 5 : -5
+      setPlacementRotation((prev) => prev + delta)
+    },
+    [pendingConfirm]
+  )
 
   const cancelPlacement = useCallback(() => {
     resetAll()
   }, [resetAll])
 
-  const handleStickerProcessed = useCallback(async (data: StickerData) => {
-    const url = URL.createObjectURL(data.blob)
-    setStickerPreviewUrl(url)
-    stickerDataRef.current = data
-    setIsPlacing(true)
-    setPlacementRotation(0)
+  const handleStickerProcessed = useCallback(
+    async (data: StickerData) => {
+      const url = URL.createObjectURL(data.blob)
+      setStickerPreviewUrl(url)
+      stickerDataRef.current = data
+      setIsPlacing(true)
+      setPlacementRotation(0)
 
-    // Generate blur placeholder in the background
-    try {
-      const blurUrl = await generateBlurDataUrl(data.blob)
-      blurDataUrlRef.current = blurUrl
-    } catch {
-      // Blur generation is best-effort
-    }
-  }, [setStickerPreviewUrl])
+      // Generate blur placeholder in the background
+      try {
+        const blurUrl = await generateBlurDataUrl(data.blob)
+        blurDataUrlRef.current = blurUrl
+      } catch {
+        // Blur generation is best-effort
+      }
+    },
+    [setStickerPreviewUrl]
+  )
 
   return {
     isPlacing,

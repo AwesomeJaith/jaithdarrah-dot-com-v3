@@ -13,12 +13,7 @@ type UseUploadCardParams = {
   onStickerProcessed: (data: StickerData) => Promise<void>
 }
 
-type CardState =
-  | "upload"
-  | "help"
-  | "place"
-  | "message"
-  | null
+type CardState = "upload" | "help" | "place" | "message" | null
 
 export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
   const [expandedCard, setExpandedCard] = useState<CardState>(null)

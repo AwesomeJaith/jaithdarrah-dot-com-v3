@@ -1,7 +1,10 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { getStickersByViewport } from "@/lib/stickers"
-import { StickerCanvas, NOTCH_PAD } from "@/components/sticker-wall/sticker-canvas"
+import {
+  StickerCanvas,
+  NOTCH_PAD,
+} from "@/components/sticker-wall/sticker-canvas"
 import { CARD_WIDTH_COMPACT } from "@/components/sticker-wall/upload-card"
 
 const CORNER_RADIUS = 14
@@ -23,7 +26,10 @@ async function StickerWallContent() {
 
 export default function StickerWallPage() {
   return (
-    <div className="flex w-full max-w-3xl flex-1 flex-col gap-4" style={{ minWidth: MIN_CANVAS_WIDTH }}>
+    <div
+      className="flex w-full max-w-3xl flex-1 flex-col gap-4"
+      style={{ minWidth: MIN_CANVAS_WIDTH }}
+    >
       <div>
         <h1>Sticker Wall</h1>
         <p className="text-sm text-muted-foreground">
