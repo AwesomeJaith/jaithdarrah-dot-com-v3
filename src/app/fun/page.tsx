@@ -10,7 +10,7 @@ import {
 export const metadata: Metadata = {
   title: "Fun",
   description:
-    "Fun interactive experiences — sticker wall, typing race, chess puzzles, and photo gallery.",
+    "Fun interactive experiences: sticker wall, typing race, chess puzzles, and photo gallery.",
 }
 
 const funItems = [

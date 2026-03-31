@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { motion } from "motion/react"
+import { AnimatePresence, motion } from "motion/react"
+import { springTransition, fadeTransition } from "./notch-cards/constants"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import type { Sticker as StickerType } from "@/lib/stickers"
@@ -314,49 +315,99 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           </motion.div>
 
           {/* Placement hint / confirm dialog */}
-          {placement.isPlacing && stickerPreviewUrl && (
-            <div
-              className="absolute left-3.5 z-40 max-w-[calc(100%-4.5rem)] sm:left-1/2 sm:max-w-none sm:-translate-x-1/2"
-              style={{ top: CORNER_RADIUS }}
-            >
-              <CanvasBar>
-                {placement.submitSuccess ? (
-                  <span className="px-1.5 text-brand">
-                    Submitted! It will appear once approved.
-                  </span>
-                ) : placement.isSubmitting ? (
-                  <span className="px-1.5">Submitting...</span>
-                ) : placement.overlapError ? (
-                  <span className="px-1.5 text-destructive">
-                    Too much overlap — try a different spot!
-                  </span>
-                ) : placement.pendingConfirm ? (
-                  <>
-                    <span className="px-1.5">Place here?</span>
-                    <Button size="sm" onClick={placement.confirmPlacement}>
-                      Confirm
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={placement.cancelConfirm}
-                    >
-                      Back
-                    </Button>
-                  </>
-                ) : (
-                  <span className="px-1.5">
-                    <span className="sm:hidden">
-                      Drag to position, release to place.
-                    </span>
-                    <span className="hidden sm:inline">
-                      Click to place your sticker. Scroll to rotate.
-                    </span>
-                  </span>
-                )}
-              </CanvasBar>
-            </div>
-          )}
+          <AnimatePresence>
+            {placement.isPlacing && stickerPreviewUrl && (
+              <motion.div
+                className="absolute left-3.5 z-40 max-w-[calc(100%-4.5rem)] sm:left-1/2 sm:max-w-none sm:-translate-x-1/2"
+                style={{ top: CORNER_RADIUS }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={springTransition}
+              >
+                <CanvasBar>
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {placement.submitSuccess ? (
+                      <motion.span
+                        key="success"
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={fadeTransition}
+                        className="px-1.5 text-brand"
+                      >
+                        Submitted! It will appear once approved.
+                      </motion.span>
+                    ) : placement.isSubmitting ? (
+                      <motion.span
+                        key="submitting"
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={fadeTransition}
+                        className="px-1.5"
+                      >
+                        Submitting...
+                      </motion.span>
+                    ) : placement.overlapError ? (
+                      <motion.span
+                        key="overlap"
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={fadeTransition}
+                        className="px-1.5 text-destructive"
+                      >
+                        Too much overlap, try a different spot!
+                      </motion.span>
+                    ) : placement.pendingConfirm ? (
+                      <motion.div
+                        key="confirm"
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={fadeTransition}
+                        className="flex items-center gap-1"
+                      >
+                        <span className="px-1.5">Place here?</span>
+                        <Button size="sm" onClick={placement.confirmPlacement}>
+                          Confirm
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={placement.cancelConfirm}
+                        >
+                          Back
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <motion.span
+                        key="hint"
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={fadeTransition}
+                        className="px-1.5"
+                      >
+                        <span className="sm:hidden">
+                          Drag to position, release to place.
+                        </span>
+                        <span className="hidden sm:inline">
+                          Click to place your sticker. Scroll to rotate.
+                        </span>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </CanvasBar>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Sticker inspector */}
           {inspectedSticker && (

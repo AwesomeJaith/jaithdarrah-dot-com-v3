@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "motion/react"
 import { Button } from "@/components/ui/button"
-import { MORPH_SPEED, CARD_WIDTH, CARD_WIDTH_COMPACT } from "./constants"
+import {
+  MORPH_SPEED,
+  CARD_WIDTH,
+  CARD_WIDTH_COMPACT,
+  springTransition,
+} from "./constants"
 import { CardPage } from "./card-page"
 import { UploadPage } from "./upload-page"
 import { HelpPage } from "./help-page"
@@ -125,13 +130,6 @@ export function UploadCard({
     ro.observe(el)
     return () => ro.disconnect()
   }, [notchBarRef])
-
-  const springTransition = {
-    type: "spring" as const,
-    stiffness: 550 / MORPH_SPEED,
-    damping: 45,
-    mass: 0.7,
-  }
 
   return (
     <motion.div

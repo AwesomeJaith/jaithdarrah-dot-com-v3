@@ -162,8 +162,8 @@ export function useStickerPlacement({
     setPendingConfirm(false)
     setOverlapError(true)
     if (overlapTimerRef.current) clearTimeout(overlapTimerRef.current)
-    overlapTimerRef.current = setTimeout(() => setOverlapError(false), 3000)
-  }, [])
+    overlapTimerRef.current = setTimeout(() => setOverlapError(false), 2000)
+  }, [setPendingConfirm])
 
   // Store sticker metadata for auto-submit
   const stickerDataRef = useRef<StickerData | null>(null)
@@ -185,7 +185,7 @@ export function useStickerPlacement({
       URL.revokeObjectURL(stickerPreviewUrl)
       setStickerPreviewUrl(null)
     }
-  }, [stickerPreviewUrl, setStickerPreviewUrl])
+  }, [setPendingConfirm, stickerPreviewUrl, setStickerPreviewUrl])
 
   // Pan/zoom outputs arrive after the pan/zoom hook runs — store in ref
   const panZoomRef = useRef<PanZoomOutputs>({
@@ -262,15 +262,11 @@ export function useStickerPlacement({
   }, [isPlacing, stickerPreviewUrl, pendingConfirm, placementSize])
 
   // Callbacks for the pan/zoom hook
-  const onPointerMove = useCallback(
-    (screenX: number, screenY: number) => {
-      lastPointerScreenRef.current = { x: screenX, y: screenY }
-      if (pendingConfirmRef.current) return
-      if (overlapError) setOverlapError(false)
-      // Position is computed by the rAF tick loop (single source of truth)
-    },
-    [overlapError]
-  )
+  const onPointerMove = useCallback((screenX: number, screenY: number) => {
+    lastPointerScreenRef.current = { x: screenX, y: screenY }
+    if (pendingConfirmRef.current) return
+    // Position is computed by the rAF tick loop (single source of truth)
+  }, [])
 
   // On touch, tapping the canvas while confirm is showing picks the sticker back up
   const onPointerDown = useCallback(
@@ -298,7 +294,7 @@ export function useStickerPlacement({
 
   const cancelConfirm = useCallback(() => {
     setPendingConfirm(false)
-  }, [])
+  }, [setPendingConfirm])
 
   const confirmPlacement = useCallback(async () => {
     const data = stickerDataRef.current

@@ -24,16 +24,36 @@ export function StickerToolbar({
 }: StickerToolbarProps) {
   if (isCompact) {
     return (
-      <CanvasBar ref={zoomRowRef}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onResetView}
-          aria-label="Reset view"
-        >
-          <FaCompass />
-        </Button>
-      </CanvasBar>
+      <div ref={zoomRowRef} className="flex flex-col gap-1">
+        <CanvasBar>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onResetView}
+            aria-label="Reset view"
+          >
+            <FaCompass />
+          </Button>
+        </CanvasBar>
+        <CanvasBar className="flex-col">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onZoomIn}
+            aria-label="Zoom in"
+          >
+            <FaPlus />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onZoomOut}
+            aria-label="Zoom out"
+          >
+            <FaMinus />
+          </Button>
+        </CanvasBar>
+      </div>
     )
   }
 
