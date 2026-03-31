@@ -157,7 +157,7 @@ self.onmessage = async (e: MessageEvent<WorkerInput>) => {
 
   try {
     const { PipeMagic } = (await _cdn(
-      "https://esm.sh/pipemagic@0.1.4?bundle"
+      "https://esm.sh/pipemagic@0.1.4"
     )) as typeof import("pipemagic")
 
     const pm = new PipeMagic()
