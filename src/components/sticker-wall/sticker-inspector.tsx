@@ -8,6 +8,7 @@ import {
   useSpring,
   useTransform,
   motion,
+  AnimatePresence,
   type MotionValue,
 } from "motion/react"
 import type { Sticker } from "@/lib/stickers"
@@ -16,7 +17,10 @@ import {
   resolveEffect,
   EFFECT_GRADIENTS,
 } from "./sticker-effects"
+import { decodeAlphaMask, GRID_SIZE } from "@/lib/overlap"
 import { TextMorph } from "torph/react"
+import { PiCursorFill } from "react-icons/pi"
+import { BsFillHandIndexThumbFill } from "react-icons/bs"
 
 type StickerInspectorProps = {
   sticker: Sticker
@@ -74,6 +78,137 @@ export function StickerInspector({
   const pendingRef = useRef<{ nx: number; ny: number } | null>(null)
   const rafRef = useRef<number | null>(null)
   const [rainbowOverride, setRainbowOverride] = useState(false)
+  const [showTiltHint, setShowTiltHint] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !localStorage.getItem("jaith-darrah-sticker-tilt-hint")
+  )
+
+  const dismissTiltHint = useCallback(() => {
+    setShowTiltHint(false)
+    localStorage.setItem("jaith-darrah-sticker-tilt-hint", "1")
+  }, [])
+
+  useEffect(() => {
+    if (!showTiltHint) return
+    const timer = setTimeout(dismissTiltHint, 10000)
+    return () => clearTimeout(timer)
+  }, [showTiltHint, dismissTiltHint])
+
+  const hintMotion = useMemo(() => {
+    const zero = { x: 0, y: 0, travel: 70, travelV: 25 }
+    if (!showTiltHint || !sticker.alpha_mask) return zero
+    const bytes = decodeAlphaMask(sticker.alpha_mask)
+
+    const isOpaque = (gx: number, gy: number) => {
+      if (gx < 0 || gx >= GRID_SIZE || gy < 0 || gy >= GRID_SIZE) return false
+      const bit = gy * GRID_SIZE + gx
+      return !!(bytes[bit >> 3] & (1 << (bit & 7)))
+    }
+
+    // Centroid in grid space
+    let sumX = 0
+    let sumY = 0
+    let count = 0
+    for (let gy = 0; gy < GRID_SIZE; gy++) {
+      for (let gx = 0; gx < GRID_SIZE; gx++) {
+        if (isOpaque(gx, gy)) {
+          sumX += gx
+          sumY += gy
+          count++
+        }
+      }
+    }
+    if (count === 0) return zero
+    const centX = sumX / count
+    const centY = sumY / count
+
+    // Probe from centroid in each direction to find safe travel distance (staying within opaque)
+    const probe = (dx: number, dy: number) => {
+      let steps = 0
+      let gx = Math.round(centX)
+      let gy = Math.round(centY)
+      while (isOpaque(gx + dx, gy + dy)) {
+        gx += dx
+        gy += dy
+        steps++
+      }
+      return steps
+    }
+    const stepsRight = probe(1, 0)
+    const stepsLeft = probe(-1, 0)
+    const stepsDown = probe(0, 1)
+    const stepsUp = probe(0, -1)
+
+    const displayW = Math.min(sticker.width * 2, INSPECTOR_SIZE)
+    const displayH = Math.min(sticker.height * 2, INSPECTOR_SIZE)
+    const cellW = displayW / GRID_SIZE
+    const cellH = displayH / GRID_SIZE
+    const MAX_H = 70
+    const MAX_V = 25
+    const toPx = (steps: number, cellPx: number, max: number) =>
+      Math.min(steps * cellPx, max)
+
+    const pxRight = toPx(stepsRight, cellW, MAX_H)
+    const pxLeft = toPx(stepsLeft, cellW, MAX_H)
+    const pxDown = toPx(stepsDown, cellH, MAX_V)
+    const pxUp = toPx(stepsUp, cellH, MAX_V)
+
+    // Use symmetric travel; shift resting position to midpoint of left/right span
+    const halfH = Math.min(pxRight, pxLeft)
+    const halfV = Math.min(pxDown, pxUp)
+    const centroidX = (centX / (GRID_SIZE - 1) - 0.5) * displayW
+    const centroidY = (centY / (GRID_SIZE - 1) - 0.5) * displayH
+    const shiftX = (pxRight - pxLeft) / 2
+    const shiftY = (pxDown - pxUp) / 2
+
+    return {
+      x: centroidX + shiftX,
+      y: centroidY + shiftY,
+      travel: halfH,
+      travelV: halfV,
+    }
+  }, [showTiltHint, sticker.alpha_mask, sticker.width, sticker.height])
+
+  // Sample sticker image at centroid to pick a contrasting hint icon color
+  const [hintDark, setHintDark] = useState(false)
+  useEffect(() => {
+    if (!showTiltHint) return
+    let cancelled = false
+    const img = new window.Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => {
+      if (cancelled) return
+      const canvas = document.createElement("canvas")
+      const size = 64
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext("2d")!
+      ctx.drawImage(img, 0, 0, size, size)
+      // Sample center region — most stickers fill the frame
+      const r = 8
+      const mid = size / 2
+      const data = ctx.getImageData(mid - r, mid - r, r * 2, r * 2).data
+      let lum = 0
+      let count = 0
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 128) continue
+        lum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+        count++
+      }
+      if (count > 0) setHintDark(lum / count > 140)
+    }
+    img.onerror = () => {
+      if (!cancelled) setHintDark(true)
+    }
+    img.src = sticker.image_url
+    return () => {
+      cancelled = true
+      img.onload = null
+      img.onerror = null
+      img.src = ""
+    }
+  }, [showTiltHint, sticker.image_url])
 
   // Store originRect in a ref so it persists during exit animation
   const originRectRef = useRef(originRect)
@@ -297,6 +432,46 @@ export function StickerInspector({
               }}
             />
           </motion.div>
+
+          {/* Tilt interaction hint — loops until user interacts */}
+          <AnimatePresence>
+            {showTiltHint && (
+              <motion.div
+                className={`pointer-events-none absolute inset-0 flex items-center justify-center drop-shadow-lg ${hintDark ? "text-black/90" : "text-white/90"}`}
+                style={{
+                  marginLeft: hintMotion.x,
+                  marginTop: hintMotion.y,
+                }}
+                initial={{ opacity: 0 }}
+                animate={{
+                  x: [0, hintMotion.travel, 0, 0, -hintMotion.travel, 0],
+                  y: [0, 0, 0, hintMotion.travelV, 0, 0],
+                  opacity: 1,
+                }}
+                exit={{ opacity: 0 }}
+                transition={{
+                  x: {
+                    duration: 2.5,
+                    delay: 0.6,
+                    ease: "easeInOut",
+                    repeat: Infinity,
+                    repeatDelay: 0.5,
+                  },
+                  y: {
+                    duration: 2.5,
+                    delay: 0.6,
+                    ease: "easeInOut",
+                    repeat: Infinity,
+                    repeatDelay: 0.5,
+                  },
+                  opacity: { duration: 0.3, delay: 0.6 },
+                }}
+              >
+                <PiCursorFill className="hidden size-6 sm:block" />
+                <BsFillHandIndexThumbFill className="size-6 sm:hidden" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Info card */}
