@@ -7,17 +7,20 @@ env.allowLocalModels = true
 
 // --- Segmentation model singleton ---
 
-type Segmenter = Awaited<ReturnType<typeof pipeline>>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Segmenter = any
 let segmenter: Segmenter | null = null
 let segmenterLoading: Promise<Segmenter> | null = null
 
 async function getSegmenter(): Promise<Segmenter> {
   if (segmenter) return segmenter
   if (!segmenterLoading) {
-    segmenterLoading = pipeline("image-segmentation", "briaai/RMBG-1.4", {
-      device: "cpu",
-      dtype: "fp32",
-    } as never).then((s) => {
+    segmenterLoading = (
+      pipeline("image-segmentation", "briaai/RMBG-1.4", {
+        device: "cpu",
+        dtype: "fp32",
+      } as never) as Promise<Segmenter>
+    ).then((s: Segmenter) => {
       segmenter = s
       return s
     })
@@ -124,8 +127,7 @@ export async function processSticker(
     4
   )
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  const result = (await (model as Function)(rawImage, {
+  const result = (await model(rawImage, {
     threshold: 0.5,
   })) as Array<{ mask?: { data: Uint8Array; channels?: number } }>
 
