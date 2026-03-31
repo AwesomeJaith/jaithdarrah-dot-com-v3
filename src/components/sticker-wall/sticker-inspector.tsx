@@ -16,6 +16,7 @@ import {
   resolveEffect,
   EFFECT_GRADIENTS,
 } from "./sticker-effects"
+import { TextMorph } from "torph/react"
 
 type StickerInspectorProps = {
   sticker: Sticker
@@ -30,11 +31,13 @@ function HoloOverlay({
   glossX,
   glossY,
   imageUrl,
+  rotation,
 }: {
   effect: string
   glossX: MotionValue<number>
   glossY: MotionValue<number>
   imageUrl: string
+  rotation: number
 }) {
   const gradientFn = EFFECT_GRADIENTS[effect]
   const holoGradient = useTransform([glossX, glossY], ([px, py]) =>
@@ -45,6 +48,7 @@ function HoloOverlay({
       className="pointer-events-none absolute inset-0"
       style={{
         background: holoGradient,
+        rotate: `${rotation}deg`,
         ...effectMaskStyles(imageUrl),
       }}
     />
@@ -202,6 +206,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               draggable={false}
               placeholder={sticker.blur_data_url ? "blur" : "empty"}
               blurDataURL={sticker.blur_data_url ?? undefined}
+              style={{ rotate: `${sticker.rotation}deg` }}
             />
             {/* Holographic effect overlay — only for rainbow */}
             {activeEffect === "rainbow" && (
@@ -210,6 +215,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
                 glossX={springGlossX}
                 glossY={springGlossY}
                 imageUrl={sticker.image_url}
+                rotation={sticker.rotation}
               />
             )}
             {/* Glare line — pointer-driven shimmer stripe */}
@@ -217,6 +223,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               className="pointer-events-none absolute inset-0"
               style={{
                 background: glareGradient,
+                rotate: `${sticker.rotation}deg`,
                 ...effectMaskStyles(sticker.image_url),
               }}
             />
@@ -225,56 +232,62 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               className="pointer-events-none absolute inset-0 rounded-sm opacity-25"
               style={{
                 background: glossGradient,
+                rotate: `${sticker.rotation}deg`,
                 ...effectMaskStyles(sticker.image_url),
               }}
             />
           </motion.div>
         </div>
 
-        {/* Make it rainbow toggle */}
-        <button
-          onClick={() => setRainbowOverride((v) => !v)}
-          className={`relative w-44 overflow-hidden rounded-md border border-white/30 px-4 py-1.5 text-sm font-medium text-white transition-colors ${
-            rainbowOverride ? "bg-white/15" : ""
-          }`}
-          style={
-            !rainbowOverride
-              ? {
-                  background:
-                    "linear-gradient(90deg, oklch(0.75 0.15 0 / 0.25), oklch(0.75 0.15 60 / 0.25), oklch(0.75 0.15 120 / 0.25), oklch(0.75 0.15 180 / 0.25), oklch(0.75 0.15 240 / 0.25), oklch(0.75 0.15 300 / 0.25), oklch(0.75 0.15 0 / 0.25))",
-                  backgroundSize: "200% 100%",
-                  animation: "rainbow-shimmer 1.5s linear infinite",
-                }
-              : undefined
-          }
-        >
-          {!rainbowOverride && (
-            <span
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(-65deg, transparent calc(50% - 4%), oklch(1 0 0 / 0.3) 50%, transparent calc(50% + 4%))",
-                backgroundSize: "200% 100%",
-                animation: "rainbow-shimmer 8s ease-in-out infinite",
-              }}
-            />
-          )}
-          {rainbowOverride ? "Make it normal." : "Make it rainbow!"}
-        </button>
-
         {/* Info card */}
-        <div className="w-80 animate-in rounded-xl border border-border bg-popover px-5 py-4 text-center shadow-xl duration-200 fade-in slide-in-from-bottom-3">
-          <p className="text-sm font-semibold text-popover-foreground">
-            Placed by {sticker.username}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {formattedDate}
-          </p>
-          {sticker.message && (
-            <p className="mt-2 text-sm text-popover-foreground/80 italic">
-              &ldquo;{sticker.message}&rdquo;
+        <div className="w-80 origin-bottom animate-in rounded-xl shadow-xl duration-200 fade-in slide-in-from-top-3">
+          <button
+            onClick={() => setRainbowOverride((v) => !v)}
+            className={`relative w-full cursor-pointer overflow-hidden rounded-t-xl px-4 py-2 text-sm font-medium transition-[padding,margin] active:mt-1.5 active:pt-0.5 ${
+              rainbowOverride
+                ? "bg-muted text-popover-foreground"
+                : "text-popover-foreground"
+            }`}
+            style={
+              !rainbowOverride
+                ? {
+                    background:
+                      "linear-gradient(90deg, oklch(0.75 0.15 0 / 0.15), oklch(0.75 0.15 60 / 0.15), oklch(0.75 0.15 120 / 0.15), oklch(0.75 0.15 180 / 0.15), oklch(0.75 0.15 240 / 0.15), oklch(0.75 0.15 300 / 0.15), oklch(0.75 0.15 0 / 0.15))",
+                    backgroundSize: "200% 100%",
+                    animation: "rainbow-shimmer 1.5s linear infinite",
+                  }
+                : undefined
+            }
+          >
+            {!rainbowOverride && (
+              <span
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(-65deg, transparent calc(50% - 4%), oklch(1 0 0 / 0.3) 50%, transparent calc(50% + 4%))",
+                  backgroundSize: "200% 100%",
+                  animation: "rainbow-shimmer 8s ease-in-out infinite",
+                }}
+              />
+            )}
+
+            <TextMorph>
+              {rainbowOverride ? "Make it normal." : "Make it rainbow!"}
+            </TextMorph>
+          </button>
+          <div className="rounded-b-xl border-t border-border bg-popover px-5 py-4 text-center">
+            <p className="text-sm font-semibold text-popover-foreground">
+              Placed by {sticker.username}
             </p>
-          )}
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {formattedDate}
+            </p>
+            {sticker.message && (
+              <p className="mt-2 text-sm text-popover-foreground/80 italic">
+                &ldquo;{sticker.message}&rdquo;
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Dismiss hint */}

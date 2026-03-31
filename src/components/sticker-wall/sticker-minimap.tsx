@@ -111,7 +111,7 @@ export function StickerMinimap({
   if (stickers.length === 0) return null
 
   return (
-    <div className="h-full w-full rounded-lg border border-sticker-border bg-sticker-panel shadow-md">
+    <div className="pointer-events-none h-full w-full rounded-lg border border-sticker-border bg-sticker-panel shadow-md select-none">
       <svg
         viewBox={`0 0 ${minimapSize} ${minimapSize}`}
         className="h-full w-full overflow-hidden rounded-lg"

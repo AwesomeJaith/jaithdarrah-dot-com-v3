@@ -99,7 +99,7 @@ function PendingSticker({
         top: sticker.y,
         width: sticker.width,
         height: sticker.height,
-        transform: `rotate(${sticker.rotation}deg)`,
+        rotate: `${sticker.rotation}deg`,
         backgroundColor: "oklch(0.5 0 0 / 0.15)",
       }}
     >
@@ -225,7 +225,7 @@ function ApprovedSticker({
         top: sticker.y,
         width: sticker.width,
         height: sticker.height,
-        transform: `rotate(${sticker.rotation}deg)`,
+        rotate: `${sticker.rotation}deg`,
         zIndex: hovered ? 2147483647 : undefined,
         cursor: onInspect ? "pointer" : undefined,
       }}
