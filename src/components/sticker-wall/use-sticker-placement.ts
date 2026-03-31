@@ -449,6 +449,7 @@ export function useStickerPlacement({
     placementPos,
     placementSize,
     placementRotation,
+    setPlacementRotation,
     isSubmitting,
     overlapError,
     submitSuccess,

@@ -21,6 +21,8 @@ import {
 import { useStickerPlacement } from "./use-sticker-placement"
 import { useUploadCard } from "./use-upload-card"
 import { UploadCard, CARD_WIDTH } from "./notch-cards"
+import { RotationDial } from "./rotation-dial"
+import { useIsMobile } from "@/hooks/use-is-mobile"
 
 type StickerCanvasProps = {
   initialStickers: StickerType[]
@@ -47,6 +49,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   useEffect(() => {
     stickerMapRef.current = stickerMap
   }, [stickerMap])
+
+  const isMobile = useIsMobile()
 
   // Shared state between placement and upload
   const [stickerPreviewUrl, setStickerPreviewUrl] = useState<string | null>(
@@ -429,6 +433,27 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                 </CanvasBar>
               </motion.div>
             )}
+          </AnimatePresence>
+
+          {/* Mobile rotation dial */}
+          <AnimatePresence>
+            {isMobile &&
+              placement.pendingConfirm &&
+              placement.placementPos &&
+              containerSize && (
+                <RotationDial
+                  rotation={placement.placementRotation}
+                  onRotationChange={placement.setPlacementRotation}
+                  stickerRect={{
+                    x: placement.placementPos.x * scale + translate.x,
+                    y: placement.placementPos.y * scale + translate.y,
+                    width: placement.placementSize.width * scale,
+                    height: placement.placementSize.height * scale,
+                  }}
+                  containerWidth={containerSize.width}
+                  containerHeight={containerSize.height}
+                />
+              )}
           </AnimatePresence>
 
           {/* Sticker inspector */}
