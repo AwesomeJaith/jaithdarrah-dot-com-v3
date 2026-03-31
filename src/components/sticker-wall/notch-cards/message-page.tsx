@@ -1,7 +1,9 @@
 "use client"
 
+import { motion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { CloseButton } from "./close-button"
+import { springTransition } from "./constants"
 
 type MessagePageProps = {
   handleCardClose: () => void
@@ -23,7 +25,14 @@ export function MessagePage({
   return (
     <>
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium">Add your info</h2>
+        <motion.h2
+          layoutId="notch-title"
+          layout="position"
+          className="text-sm font-medium"
+          transition={springTransition}
+        >
+          Add your info
+        </motion.h2>
         <CloseButton onClick={handleCardClose} />
       </div>
 
@@ -70,14 +79,20 @@ export function MessagePage({
         </div>
       </div>
 
-      <Button
-        size="lg"
-        onClick={handlePlaceConfirm}
-        disabled={!username.trim()}
-        className="w-full"
+      <motion.div
+        layoutId="notch-action"
+        layout="position"
+        transition={springTransition}
       >
-        Place sticker
-      </Button>
+        <Button
+          size="lg"
+          onClick={handlePlaceConfirm}
+          disabled={!username.trim()}
+          className="w-full"
+        >
+          Place sticker
+        </Button>
+      </motion.div>
     </>
   )
 }

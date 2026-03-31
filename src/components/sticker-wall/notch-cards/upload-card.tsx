@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { motion } from "motion/react"
+import { LayoutGroup, motion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import {
   MORPH_SPEED,
@@ -149,66 +149,68 @@ export function UploadCard({
       }}
       transition={springTransition}
     >
-      {/* Upload page */}
-      <CardPage
-        show={showUpload}
-        cardWidth={cardWidth}
-        onHeight={heightCallbacks.upload}
-      >
-        <UploadPage
-          handleCardClose={handleCardClose}
-          uploadProcessing={uploadProcessing}
-          uploadDragOver={uploadDragOver}
-          setUploadDragOver={setUploadDragOver}
-          uploadFileInputRef={uploadFileInputRef}
-          handleUploadFile={handleUploadFile}
-          targetProgress={targetProgress}
-          stageText={stageText}
-          processingDone={processingDone}
-          transitionToPlace={transitionToPlace}
-          uploadError={uploadError}
-        />
-      </CardPage>
+      <LayoutGroup>
+        {/* Upload page */}
+        <CardPage
+          show={showUpload}
+          cardWidth={cardWidth}
+          onHeight={heightCallbacks.upload}
+        >
+          <UploadPage
+            handleCardClose={handleCardClose}
+            uploadProcessing={uploadProcessing}
+            uploadDragOver={uploadDragOver}
+            setUploadDragOver={setUploadDragOver}
+            uploadFileInputRef={uploadFileInputRef}
+            handleUploadFile={handleUploadFile}
+            targetProgress={targetProgress}
+            stageText={stageText}
+            processingDone={processingDone}
+            transitionToPlace={transitionToPlace}
+            uploadError={uploadError}
+          />
+        </CardPage>
 
-      {/* Help page */}
-      <CardPage
-        show={showHelp}
-        cardWidth={cardWidth}
-        onHeight={heightCallbacks.help}
-      >
-        <HelpPage handleCardClose={handleCardClose} />
-      </CardPage>
+        {/* Help page */}
+        <CardPage
+          show={showHelp}
+          cardWidth={cardWidth}
+          onHeight={heightCallbacks.help}
+        >
+          <HelpPage handleCardClose={handleCardClose} />
+        </CardPage>
 
-      {/* Preview sticker page */}
-      <CardPage
-        show={showPlace}
-        cardWidth={cardWidth}
-        minHeight={sharedMinHeight}
-        onHeight={heightCallbacks.place}
-      >
-        <PlacePage
-          handleCardClose={handleCardClose}
-          stickerPreviewUrl={stickerPreviewUrl}
-          transitionToMessage={transitionToMessage}
-        />
-      </CardPage>
+        {/* Preview sticker page */}
+        <CardPage
+          show={showPlace}
+          cardWidth={cardWidth}
+          minHeight={sharedMinHeight}
+          onHeight={heightCallbacks.place}
+        >
+          <PlacePage
+            handleCardClose={handleCardClose}
+            stickerPreviewUrl={stickerPreviewUrl}
+            transitionToMessage={transitionToMessage}
+          />
+        </CardPage>
 
-      {/* Message page */}
-      <CardPage
-        show={showMessage}
-        cardWidth={cardWidth}
-        minHeight={sharedMinHeight}
-        onHeight={heightCallbacks.message}
-      >
-        <MessagePage
-          handleCardClose={handleCardClose}
-          username={username}
-          setUsername={setUsername}
-          message={message}
-          setMessage={setMessage}
-          handlePlaceConfirm={handlePlaceConfirm}
-        />
-      </CardPage>
+        {/* Message page */}
+        <CardPage
+          show={showMessage}
+          cardWidth={cardWidth}
+          minHeight={sharedMinHeight}
+          onHeight={heightCallbacks.message}
+        >
+          <MessagePage
+            handleCardClose={handleCardClose}
+            username={username}
+            setUsername={setUsername}
+            message={message}
+            setMessage={setMessage}
+            handlePlaceConfirm={handlePlaceConfirm}
+          />
+        </CardPage>
+      </LayoutGroup>
 
       {/* Invisible spacer — mirrors visible buttons so notch fits snugly */}
       <div

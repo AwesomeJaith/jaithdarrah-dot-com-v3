@@ -1,8 +1,10 @@
 "use client"
 
 import { FaUpload } from "react-icons/fa6"
+import { motion } from "motion/react"
 import { CloseButton } from "./close-button"
 import { ProcessingDisplay } from "./processing-display"
+import { springTransition } from "./constants"
 
 type UploadPageProps = {
   handleCardClose: () => void
@@ -34,7 +36,14 @@ export function UploadPage({
   return (
     <>
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium">Create your sticker</h2>
+        <motion.h2
+          layoutId="notch-title"
+          layout="position"
+          className="text-sm font-medium"
+          transition={springTransition}
+        >
+          Create your sticker
+        </motion.h2>
         <CloseButton onClick={handleCardClose} />
       </div>
 

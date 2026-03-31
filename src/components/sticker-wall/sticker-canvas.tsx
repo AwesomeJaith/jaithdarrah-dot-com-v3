@@ -70,8 +70,16 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
   // Layout measurement
   const notchBarRef = useRef<HTMLDivElement>(null!)
-  const zoomRowRef = useRef<HTMLDivElement>(null!)
   const [zoomRowHeight, setZoomRowHeight] = useState(0)
+  const zoomRowRoRef = useRef<ResizeObserver | null>(null)
+  const zoomRowRef = useCallback((el: HTMLDivElement | null) => {
+    zoomRowRoRef.current?.disconnect()
+    if (!el) return
+    setZoomRowHeight(el.offsetHeight)
+    const ro = new ResizeObserver(() => setZoomRowHeight(el.offsetHeight))
+    ro.observe(el)
+    zoomRowRoRef.current = ro
+  }, [])
 
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
     typeof window !== "undefined"
@@ -133,11 +141,6 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
       upload.clearError()
     }
   }, [placement, upload])
-
-  useEffect(() => {
-    const el = zoomRowRef.current
-    if (el) setZoomRowHeight(el.offsetHeight)
-  }, [])
 
   // Detect prefers-reduced-motion changes
   useEffect(() => {

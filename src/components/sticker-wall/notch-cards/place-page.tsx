@@ -1,8 +1,10 @@
 "use client"
 
 import Image from "next/image"
+import { motion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { CloseButton } from "./close-button"
+import { springTransition } from "./constants"
 
 type PlacePageProps = {
   handleCardClose: () => void
@@ -18,7 +20,14 @@ export function PlacePage({
   return (
     <>
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium">Ready!</h2>
+        <motion.h2
+          layoutId="notch-title"
+          layout="position"
+          className="text-sm font-medium"
+          transition={springTransition}
+        >
+          Ready!
+        </motion.h2>
         <CloseButton onClick={handleCardClose} />
       </div>
 
@@ -33,9 +42,16 @@ export function PlacePage({
             style={{ height: "auto" }}
           />
         )}
-        <Button size="lg" className="w-full" onClick={transitionToMessage}>
-          Next
-        </Button>
+        <motion.div
+          layoutId="notch-action"
+          layout="position"
+          className="w-full"
+          transition={springTransition}
+        >
+          <Button size="lg" className="w-full" onClick={transitionToMessage}>
+            Next
+          </Button>
+        </motion.div>
       </div>
     </>
   )

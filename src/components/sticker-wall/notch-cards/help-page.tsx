@@ -1,12 +1,21 @@
 "use client"
 
+import { motion } from "motion/react"
 import { CloseButton } from "./close-button"
+import { springTransition } from "./constants"
 
 export function HelpPage({ handleCardClose }: { handleCardClose: () => void }) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium">How it works</h2>
+        <motion.h2
+          layoutId="notch-title"
+          layout="position"
+          className="text-sm font-medium"
+          transition={springTransition}
+        >
+          How it works
+        </motion.h2>
         <CloseButton onClick={handleCardClose} />
       </div>
 
