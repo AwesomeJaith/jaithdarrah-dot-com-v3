@@ -1,8 +1,17 @@
 "use client"
 
 import { motion } from "motion/react"
+import { Upload, Wand2, Pencil, Move, Check } from "lucide-react"
 import { CloseButton } from "./close-button"
 import { springTransition } from "./constants"
+
+const steps = [
+  { icon: Upload, text: "Upload an image." },
+  { icon: Wand2, text: "Turn it into a sticker." },
+  { icon: Pencil, text: "Add your name and message." },
+  { icon: Move, text: "Place and rotate it on the canvas." },
+  { icon: Check, text: "Reviewed and approved." },
+]
 
 export function HelpPage({ handleCardClose }: { handleCardClose: () => void }) {
   return (
@@ -19,14 +28,16 @@ export function HelpPage({ handleCardClose }: { handleCardClose: () => void }) {
         <CloseButton onClick={handleCardClose} />
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 rounded-lg bg-muted p-3">
-        <div className="flex h-16 items-center justify-center rounded-md bg-background/50 text-muted-foreground">
-          <span className="text-xs">Tutorial video coming soon</span>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Upload an image, click anywhere on the canvas to place it, and scroll
-          to rotate before placing.
-        </p>
+      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+        {steps.map(({ icon: Icon, text }) => (
+          <div
+            key={text}
+            className="flex items-center gap-2 rounded-sm bg-muted px-2 py-1"
+          >
+            <Icon className="size-3.5 shrink-0" />
+            <span>{text}</span>
+          </div>
+        ))}
       </div>
     </>
   )
