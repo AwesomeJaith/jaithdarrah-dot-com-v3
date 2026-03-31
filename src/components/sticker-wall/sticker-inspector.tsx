@@ -20,10 +20,20 @@ import { TextMorph } from "torph/react"
 
 type StickerInspectorProps = {
   sticker: Sticker
+  originRect: DOMRect | null
   onClose: () => void
 }
 
 const INTERACT_SPRING = { stiffness: 300, damping: 20 }
+const INSPECTOR_SPRING = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 35,
+  mass: 0.8,
+}
+const INSPECTOR_SPRING_STICKER = { ...INSPECTOR_SPRING, delay: 0.1 }
+const INSPECTOR_SPRING_INFO = { ...INSPECTOR_SPRING, delay: 0.05 }
+const INSPECTOR_SIZE = 320
 
 /** Pointer-driven holographic gradient overlay */
 function HoloOverlay({
@@ -55,15 +65,35 @@ function HoloOverlay({
   )
 }
 
-export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
+export function StickerInspector({
+  sticker,
+  originRect,
+  onClose,
+}: StickerInspectorProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const pendingRef = useRef<{ nx: number; ny: number } | null>(null)
   const rafRef = useRef<number | null>(null)
   const [rainbowOverride, setRainbowOverride] = useState(false)
 
+  // Store originRect in a ref so it persists during exit animation
+  const originRectRef = useRef(originRect)
+  if (originRect) originRectRef.current = originRect
+
   const activeEffect = rainbowOverride
     ? "rainbow"
     : resolveEffect(sticker.effect)
+
+  // Compute morph origin offset from natural centered position
+  const origin = originRectRef.current
+  const offsetX = origin
+    ? origin.left + origin.width / 2 - window.innerWidth / 2
+    : 0
+  const offsetY = origin
+    ? origin.top + origin.height / 2 - window.innerHeight / 2
+    : 0
+  const initialScale = origin
+    ? Math.min(origin.width, origin.height) / INSPECTOR_SIZE
+    : 0.8
 
   // Spring-driven tilt and gloss
   const tiltX = useMotionValue(0)
@@ -138,10 +168,6 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
     [applyTilt]
   )
 
-  const handlePointerLeave = useCallback(() => {
-    resetTilt()
-  }, [resetTilt])
-
   // Escape key to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -176,31 +202,55 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
 
   return (
     /* Overlay */
-    <div
+    <motion.div
       className="fixed inset-0 z-9999 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Blurred backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+      <motion.div
+        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.25 }}
+      />
 
-      {/* Card — stop propagation so clicking the sticker itself doesn't close */}
-      <div
+      {/* Content wrapper — morphs from sticker origin to center */}
+      <motion.div
         className="relative z-10 flex flex-col items-center gap-6"
         onClick={(e) => e.stopPropagation()}
+        initial={{
+          x: offsetX,
+          y: offsetY,
+          scale: initialScale,
+          opacity: 0.5,
+        }}
+        animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+        exit={{
+          x: offsetX,
+          y: offsetY,
+          scale: initialScale,
+          opacity: 0,
+        }}
+        transition={INSPECTOR_SPRING}
       >
-        {/* Sticker image with 3D tilt */}
-        <div
+        {/* Sticker image with 3D tilt — separates from card with delay */}
+        <motion.div
           ref={cardRef}
           className="relative flex aspect-square w-80 touch-none items-center justify-center select-none"
           style={{ perspective: "600px" }}
           onPointerMove={handlePointerMove}
-          onPointerLeave={handlePointerLeave}
+          onPointerLeave={resetTilt}
+          initial={{ opacity: 0, y: 40, scale: 0.8 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 40, scale: 0.8 }}
+          transition={INSPECTOR_SPRING_STICKER}
         >
           <motion.div
             className="relative will-change-transform"
             style={{
-              width: Math.min(sticker.width * 2, 320),
-              height: Math.min(sticker.height * 2, 320),
+              width: Math.min(sticker.width * 2, INSPECTOR_SIZE),
+              height: Math.min(sticker.height * 2, INSPECTOR_SIZE),
               transform: transformStyle,
               transformStyle: "preserve-3d",
               outline: "1px solid transparent",
@@ -210,7 +260,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               src={sticker.image_url}
               alt={`Sticker by ${sticker.username}`}
               fill
-              sizes="320px"
+              sizes={`${INSPECTOR_SIZE}px`}
               className="object-contain drop-shadow-2xl"
               draggable={false}
               placeholder={sticker.blur_data_url ? "blur" : "empty"}
@@ -247,10 +297,16 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               }}
             />
           </motion.div>
-        </div>
+        </motion.div>
 
         {/* Info card */}
-        <div className="w-80 origin-bottom animate-in rounded-xl shadow-xl duration-200 fade-in slide-in-from-top-3">
+        <motion.div
+          className="w-80 origin-bottom rounded-xl shadow-xl"
+          initial={{ opacity: 0, y: 12, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 12, scale: 0.95 }}
+          transition={INSPECTOR_SPRING_INFO}
+        >
           <button
             onClick={() => setRainbowOverride((v) => !v)}
             className={`relative w-full cursor-pointer overflow-hidden rounded-t-xl px-4 py-2 text-sm font-medium transition-[padding,margin] active:mt-1.5 active:pt-0.5 ${
@@ -298,16 +354,22 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               </p>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Dismiss hint */}
-        <p className="text-xs text-white/40">
+        <motion.p
+          className="text-xs text-white/40"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+        >
           <span className="sm:hidden">Tap outside to close</span>
           <span className="hidden sm:inline">
             Click outside or press Esc to close
           </span>
-        </p>
-      </div>
-    </div>
+        </motion.p>
+      </motion.div>
+    </motion.div>
   )
 }

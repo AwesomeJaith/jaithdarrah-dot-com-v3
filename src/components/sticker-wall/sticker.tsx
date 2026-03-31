@@ -9,7 +9,7 @@ import { StickerPopup } from "./sticker-popup"
 
 type StickerProps = {
   sticker: StickerType
-  onInspect?: (sticker: StickerType) => void
+  onInspect?: (sticker: StickerType, originRect: DOMRect) => void
   disabled?: boolean
   placementPos?: { x: number; y: number } | null
   placementSize?: { width: number; height: number }
@@ -18,7 +18,7 @@ type StickerProps = {
 
 type ApprovedStickerProps = {
   sticker: StickerType
-  onInspect?: (sticker: StickerType) => void
+  onInspect?: (sticker: StickerType, originRect: DOMRect) => void
   disabled?: boolean
 }
 
@@ -197,7 +197,8 @@ function ApprovedSticker({
     // Only treat as a click if the pointer barely moved (not a pan)
     if (dist < 5) {
       setHovered(false)
-      onInspect(sticker)
+      const rect = divRef.current!.getBoundingClientRect()
+      onInspect(sticker, rect)
     }
     pointerDownPos.current = null
   }

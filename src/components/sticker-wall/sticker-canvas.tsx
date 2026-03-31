@@ -57,6 +57,16 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   const [inspectedSticker, setInspectedSticker] = useState<StickerType | null>(
     null
   )
+  const [inspectOriginRect, setInspectOriginRect] = useState<DOMRect | null>(
+    null
+  )
+  const handleInspect = useCallback(
+    (sticker: StickerType, originRect: DOMRect) => {
+      setInspectOriginRect(originRect)
+      setInspectedSticker(sticker)
+    },
+    []
+  )
 
   // Layout measurement
   const notchBarRef = useRef<HTMLDivElement>(null!)
@@ -410,12 +420,19 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           </AnimatePresence>
 
           {/* Sticker inspector */}
-          {inspectedSticker && (
-            <StickerInspector
-              sticker={inspectedSticker}
-              onClose={() => setInspectedSticker(null)}
-            />
-          )}
+          <AnimatePresence>
+            {inspectedSticker && (
+              <StickerInspector
+                key={inspectedSticker.id}
+                sticker={inspectedSticker}
+                originRect={inspectOriginRect}
+                onClose={() => {
+                  setInspectedSticker(null)
+                  setInspectOriginRect(null)
+                }}
+              />
+            )}
+          </AnimatePresence>
         </>
       }
     >
@@ -464,7 +481,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
               <Sticker
                 key={sticker.id}
                 sticker={sticker}
-                onInspect={setInspectedSticker}
+                onInspect={handleInspect}
                 disabled={placement.isPlacing && !!stickerPreviewUrl}
               />
             )
