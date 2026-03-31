@@ -98,7 +98,17 @@ export function UploadCard({
         : showMessage
           ? "message"
           : null
-  const cardHeight = activePage ? (pageHeights[activePage] ?? 0) : 0
+  // Place and message pages share the same min height so the card doesn't resize between them
+  const sharedMinHeight = Math.max(
+    pageHeights.place ?? 0,
+    pageHeights.message ?? 0
+  )
+  const cardHeight = activePage
+    ? Math.max(
+        pageHeights[activePage] ?? 0,
+        activePage === "place" || activePage === "message" ? sharedMinHeight : 0
+      )
+    : 0
 
   // Measure spacer to get an explicit collapsed width so the spring can
   // interpolate between Cancel-width and Create+Help-width.
@@ -173,6 +183,7 @@ export function UploadCard({
       <CardPage
         show={showPlace}
         cardWidth={cardWidth}
+        minHeight={sharedMinHeight}
         onHeight={heightCallbacks.current.place}
       >
         <PlacePage
@@ -186,7 +197,7 @@ export function UploadCard({
       <CardPage
         show={showMessage}
         cardWidth={cardWidth}
-        minHeight={pageHeights.place}
+        minHeight={sharedMinHeight}
         onHeight={heightCallbacks.current.message}
       >
         <MessagePage

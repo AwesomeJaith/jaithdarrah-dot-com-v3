@@ -21,11 +21,11 @@ export function CardPage({
 
   useEffect(() => {
     const el = measureRef.current
-    if (!el || !onHeight || !show) return
+    if (!el || !onHeight) return
     const ro = new ResizeObserver(() => onHeight(el.scrollHeight))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [onHeight, show])
+  }, [onHeight])
 
   return (
     <div
