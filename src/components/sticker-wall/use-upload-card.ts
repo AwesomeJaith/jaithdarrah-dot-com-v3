@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import presetJson from "./sticker.json"
 import type { WorkerMessage } from "./process-sticker-worker"
+import {
+  isStickerServerAvailable,
+  isTouchDevice,
+  processStickerRemote,
+} from "@/lib/process-sticker-remote"
 
 export type StickerData = {
   blob: Blob
@@ -44,6 +49,7 @@ export function useUploadCard({
   const [message, setMessage] = useState("")
   const uploadFileInputRef = useRef<HTMLInputElement>(null!)
   const workerRef = useRef<Worker | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const pendingDimsRef = useRef<{
     width: number
     height: number
@@ -58,15 +64,19 @@ export function useUploadCard({
     setExpandedCard("help")
   }, [])
 
-  const terminateWorker = useCallback(() => {
+  const terminateProcessing = useCallback(() => {
     if (workerRef.current) {
       workerRef.current.terminate()
       workerRef.current = null
     }
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
   }, [])
 
   const handleCardClose = useCallback(() => {
-    terminateWorker()
+    terminateProcessing()
     setExpandedCard(null)
     setUploadError(null)
     setUploadDragOver(false)
@@ -76,7 +86,7 @@ export function useUploadCard({
     setProcessingDone(false)
     setPendingBlob(null)
     setMessage("")
-  }, [terminateWorker])
+  }, [terminateProcessing])
 
   const handleUploadFile = useCallback(
     (file: File) => {
@@ -86,52 +96,92 @@ export function useUploadCard({
         return
       }
 
-      terminateWorker()
+      terminateProcessing()
       setUploadProcessing(true)
       setTargetProgress(0)
-      setStageText("Loading image...")
       setProcessingDone(false)
       setUploadError(null)
 
-      const worker = new Worker(
-        new URL("./process-sticker-worker.ts", import.meta.url)
-      )
-      workerRef.current = worker
+      const useServer = isTouchDevice() && isStickerServerAvailable()
 
-      worker.onmessage = async (e: MessageEvent<WorkerMessage>) => {
-        const msg = e.data
-        switch (msg.type) {
-          case "progress":
-            setTargetProgress(msg.progress)
-            setStageText(msg.stage)
-            break
-          case "done":
-            setPendingBlob(msg.blob)
+      if (useServer) {
+        // Server-side processing for touch devices
+        setStageText("Processing on server...")
+        const abortController = new AbortController()
+        abortRef.current = abortController
+
+        // Animate progress slowly while waiting
+        let progress = 0
+        const interval = setInterval(() => {
+          progress = Math.min(progress + 0.01, 0.8)
+          setTargetProgress(progress)
+        }, 200)
+
+        processStickerRemote(file, abortController.signal)
+          .then((result) => {
+            clearInterval(interval)
+            setPendingBlob(result.blob)
             pendingDimsRef.current = {
-              width: msg.width,
-              height: msg.height,
-              alphaMask: msg.alphaMask,
+              width: result.width,
+              height: result.height,
+              alphaMask: result.alphaMask,
             }
+            setTargetProgress(1)
             setProcessingDone(true)
-            terminateWorker()
-            break
-          case "error":
-            setUploadError(msg.message)
+          })
+          .catch((err) => {
+            clearInterval(interval)
+            if (err instanceof DOMException && err.name === "AbortError") return
+            setUploadError(
+              err instanceof Error
+                ? err.message
+                : "Failed to process image. Please try another one."
+            )
             setUploadProcessing(false)
-            terminateWorker()
-            break
+          })
+      } else {
+        // Client-side worker processing for desktop
+        setStageText("Loading image...")
+        const worker = new Worker(
+          new URL("./process-sticker-worker.ts", import.meta.url)
+        )
+        workerRef.current = worker
+
+        worker.onmessage = async (e: MessageEvent<WorkerMessage>) => {
+          const msg = e.data
+          switch (msg.type) {
+            case "progress":
+              setTargetProgress(msg.progress)
+              setStageText(msg.stage)
+              break
+            case "done":
+              setPendingBlob(msg.blob)
+              pendingDimsRef.current = {
+                width: msg.width,
+                height: msg.height,
+                alphaMask: msg.alphaMask,
+              }
+              setProcessingDone(true)
+              terminateProcessing()
+              break
+            case "error":
+              setUploadError(msg.message)
+              setUploadProcessing(false)
+              terminateProcessing()
+              break
+          }
         }
-      }
 
-      worker.onerror = () => {
-        setUploadError("Failed to process image. Please try another one.")
-        setUploadProcessing(false)
-        terminateWorker()
-      }
+        worker.onerror = () => {
+          setUploadError("Failed to process image. Please try another one.")
+          setUploadProcessing(false)
+          terminateProcessing()
+        }
 
-      worker.postMessage({ file, preset: presetJson })
+        worker.postMessage({ file, preset: presetJson })
+      }
     },
-    [terminateWorker]
+    [terminateProcessing]
   )
 
   const transitionToPlace = useCallback(() => {
@@ -190,7 +240,7 @@ export function useUploadCard({
   }, [stickerPreviewUrl])
 
   // Clean up worker on unmount
-  useEffect(() => terminateWorker, [terminateWorker])
+  useEffect(() => terminateProcessing, [terminateProcessing])
 
   const clearError = useCallback(() => setUploadError(null), [])
 
