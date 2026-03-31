@@ -2,7 +2,6 @@
 
 import type { Sticker } from "@/lib/stickers"
 
-// TODO: Improve appearance of sticker popup
 export function StickerPopup({ sticker }: { sticker: Sticker }) {
   // Counter-rotate so the popup text stays upright regardless of sticker rotation.
   // Normalize to [-180, 180] then negate.

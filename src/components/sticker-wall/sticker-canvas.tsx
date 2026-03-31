@@ -18,7 +18,7 @@ import {
 } from "./use-canvas-pan-zoom"
 import { useStickerPlacement } from "./use-sticker-placement"
 import { useUploadCard } from "./use-upload-card"
-import { UploadCard, CARD_WIDTH } from "./upload-card"
+import { UploadCard, CARD_WIDTH } from "./notch-cards"
 
 type StickerCanvasProps = {
   initialStickers: StickerType[]

@@ -5,7 +5,7 @@ import {
   StickerCanvas,
   NOTCH_PAD,
 } from "@/components/sticker-wall/sticker-canvas"
-import { CARD_WIDTH_COMPACT } from "@/components/sticker-wall/upload-card"
+import { CARD_WIDTH_COMPACT } from "@/components/sticker-wall/notch-cards"
 
 const CORNER_RADIUS = 14
 const MIN_CANVAS_WIDTH = CARD_WIDTH_COMPACT + NOTCH_PAD * 2 + CORNER_RADIUS * 2

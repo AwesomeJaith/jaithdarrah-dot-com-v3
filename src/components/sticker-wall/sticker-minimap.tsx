@@ -108,6 +108,11 @@ export function StickerMinimap({
     return { cx, cy, angle }
   }, [origin, minimapSize])
 
+  const approvedStickers = useMemo(
+    () => stickers.filter((s) => s.status === "approved"),
+    [stickers]
+  )
+
   if (stickers.length === 0) return null
 
   return (
@@ -135,40 +140,38 @@ export function StickerMinimap({
         />
 
         {/* Sticker thumbnails */}
-        {stickers
-          .filter((s) => s.status === "approved")
-          .map((sticker) => {
-            const pos = toMap(sticker.x, sticker.y)
-            const sw = Math.max(sticker.width * mapScale, 2)
-            const sh = Math.max(sticker.height * mapScale, 2)
-            const cx = pos.x + sw / 2
-            const cy = pos.y + sh / 2
+        {approvedStickers.map((sticker) => {
+          const pos = toMap(sticker.x, sticker.y)
+          const sw = Math.max(sticker.width * mapScale, 2)
+          const sh = Math.max(sticker.height * mapScale, 2)
+          const cx = pos.x + sw / 2
+          const cy = pos.y + sh / 2
 
-            const href = sticker.image_url
+          const href = sticker.image_url
 
-            return href ? (
-              <image
-                key={sticker.id}
-                href={href}
-                x={pos.x}
-                y={pos.y}
-                width={sw}
-                height={sh}
-                transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
-                preserveAspectRatio="xMidYMid meet"
-              />
-            ) : (
-              <rect
-                key={sticker.id}
-                x={pos.x}
-                y={pos.y}
-                width={sw}
-                height={sh}
-                transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
-                className="fill-muted-foreground/20"
-              />
-            )
-          })}
+          return href ? (
+            <image
+              key={sticker.id}
+              href={href}
+              x={pos.x}
+              y={pos.y}
+              width={sw}
+              height={sh}
+              transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          ) : (
+            <rect
+              key={sticker.id}
+              x={pos.x}
+              y={pos.y}
+              width={sw}
+              height={sh}
+              transform={`rotate(${sticker.rotation} ${cx} ${cy})`}
+              className="fill-muted-foreground/20"
+            />
+          )
+        })}
 
         {/* Viewport indicator — always centered */}
         {viewport && (
