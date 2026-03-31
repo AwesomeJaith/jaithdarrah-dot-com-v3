@@ -14,11 +14,15 @@ export type StickerData = {
 
 type UseUploadCardParams = {
   onStickerProcessed: (data: StickerData) => Promise<void>
+  notchRootRef: React.RefObject<HTMLDivElement>
 }
 
 type CardState = "upload" | "help" | "place" | "message" | null
 
-export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
+export function useUploadCard({
+  onStickerProcessed,
+  notchRootRef,
+}: UseUploadCardParams) {
   const [expandedCard, setExpandedCard] = useState<CardState>(null)
   const showUpload = expandedCard === "upload"
   const showHelp = expandedCard === "help"
@@ -39,7 +43,6 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
   })
   const [message, setMessage] = useState("")
   const uploadFileInputRef = useRef<HTMLInputElement>(null!)
-  const notchRootRef = useRef<HTMLDivElement>(null!)
   const workerRef = useRef<Worker | null>(null)
   const pendingDimsRef = useRef<{
     width: number
@@ -206,7 +209,6 @@ export function useUploadCard({ onStickerProcessed }: UseUploadCardParams) {
     uploadDragOver,
     setUploadDragOver,
     uploadFileInputRef,
-    notchRootRef,
     handleCardClose,
     handleUploadFile,
     stickerPreviewUrl,

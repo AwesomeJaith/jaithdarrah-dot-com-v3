@@ -7,6 +7,7 @@ const EDGE_PAN_MARGIN = 50
 const EDGE_PAN_SLOW_SPEED = 2
 const EDGE_PAN_ACCEL = 0.05
 const EDGE_PAN_MAX_SPEED = 25
+const NOTCH_DEAD_ZONE_PAD = 40
 
 function edgePanAxis(rel: number, size: number): number {
   const distFromNear = rel
@@ -60,6 +61,8 @@ type UseStickerPlacementParams = {
   setStickerPreviewUrl: (url: string | null) => void
   onStickerSubmitted: (sticker: Sticker) => void
   stickersRef: React.RefObject<Map<string, Sticker>>
+  notchRef: React.RefObject<HTMLDivElement | null>
+  toolbarRef: React.RefObject<HTMLDivElement | null>
 }
 
 const STICKER_MAX_SIDE = 100
@@ -124,6 +127,8 @@ export function useStickerPlacement({
   setStickerPreviewUrl,
   onStickerSubmitted,
   stickersRef,
+  notchRef,
+  toolbarRef,
 }: UseStickerPlacementParams) {
   const [isPlacing, setIsPlacing] = useState(false)
   const [pendingConfirm, _setPendingConfirm] = useState(false)
@@ -147,6 +152,7 @@ export function useStickerPlacement({
   const [placementAlphaMask, setPlacementAlphaMask] = useState<string | null>(
     null
   )
+  const [pointerOverToolbar, setPointerOverToolbar] = useState(false)
   const overlapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -178,6 +184,7 @@ export function useStickerPlacement({
     setPlacementRotation(0)
     setPlacementSize({ width: 100, height: 100 })
     setPlacementAlphaMask(null)
+    setPointerOverToolbar(false)
     stickerDataRef.current = null
     blurDataUrlRef.current = null
     lastPointerScreenRef.current = null
@@ -229,7 +236,33 @@ export function useStickerPlacement({
       }
 
       const rect = container.getBoundingClientRect()
-      const { dx, dy } = computeEdgePanDelta(pointer.x, pointer.y, rect)
+      let { dx, dy } = computeEdgePanDelta(pointer.x, pointer.y, rect)
+
+      // Suppress edge panning when cursor is near the notch (cancel button)
+      const notch = notchRef.current?.getBoundingClientRect()
+      if (
+        notch &&
+        pointer.x >= notch.left - NOTCH_DEAD_ZONE_PAD &&
+        pointer.x <= notch.right + NOTCH_DEAD_ZONE_PAD &&
+        pointer.y >= notch.top - NOTCH_DEAD_ZONE_PAD &&
+        pointer.y <= notch.bottom + NOTCH_DEAD_ZONE_PAD
+      ) {
+        dx = 0
+        dy = 0
+      }
+
+      // Fade toolbar when cursor hovers over it
+      const toolbar = toolbarRef.current?.getBoundingClientRect()
+      const overToolbar =
+        !!toolbar &&
+        pointer.x >= toolbar.left &&
+        pointer.x <= toolbar.right &&
+        pointer.y >= toolbar.top &&
+        pointer.y <= toolbar.bottom
+      setPointerOverToolbar((prev) =>
+        prev === overToolbar ? prev : overToolbar
+      )
+
       const panning = dx !== 0 || dy !== 0
 
       // Single source of truth for sticker position — avoids fighting
@@ -259,7 +292,14 @@ export function useStickerPlacement({
         edgePanRafRef.current = null
       }
     }
-  }, [isPlacing, stickerPreviewUrl, pendingConfirm, placementSize])
+  }, [
+    isPlacing,
+    stickerPreviewUrl,
+    pendingConfirm,
+    placementSize,
+    notchRef,
+    toolbarRef,
+  ])
 
   // Callbacks for the pan/zoom hook
   const onPointerMove = useCallback((screenX: number, screenY: number) => {
@@ -422,5 +462,6 @@ export function useStickerPlacement({
     onWheel,
     setPanZoom,
     placementAlphaMask,
+    pointerOverToolbar,
   }
 }

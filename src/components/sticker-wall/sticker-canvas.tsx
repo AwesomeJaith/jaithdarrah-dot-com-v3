@@ -70,6 +70,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
   // Layout measurement
   const notchBarRef = useRef<HTMLDivElement>(null!)
+  const notchRootRef = useRef<HTMLDivElement>(null!)
+  const toolbarRef = useRef<HTMLDivElement>(null!)
   const [zoomRowHeight, setZoomRowHeight] = useState(0)
   const zoomRowRoRef = useRef<ResizeObserver | null>(null)
   const zoomRowRef = useCallback((el: HTMLDivElement | null) => {
@@ -102,6 +104,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     setStickerPreviewUrl,
     onStickerSubmitted: handleStickerSubmitted,
     stickersRef: stickerMapRef,
+    notchRef: notchRootRef,
+    toolbarRef,
   })
 
   // --- Pan/zoom hook (receives placement state + callbacks directly) ---
@@ -130,6 +134,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
 
   const upload = useUploadCard({
     onStickerProcessed: placement.handleStickerProcessed,
+    notchRootRef,
   })
 
   // Handle the "create a sticker" / "cancel" button
@@ -253,7 +258,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
           uploadDragOver={upload.uploadDragOver}
           setUploadDragOver={upload.setUploadDragOver}
           uploadFileInputRef={upload.uploadFileInputRef}
-          notchRootRef={upload.notchRootRef}
+          notchRootRef={notchRootRef}
           notchBarRef={notchBarRef}
           handleCardClose={upload.handleCardClose}
           handleUploadFile={upload.handleUploadFile}
@@ -273,14 +278,18 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
         <>
           {/* Toolbar (minimap + zoom controls) */}
           <motion.div
-            className="absolute z-40"
+            ref={toolbarRef}
+            className="absolute z-40 transition-opacity duration-200"
             initial={false}
             animate={{
               top: isCompact ? CORNER_RADIUS : toolbarTop,
               width: isCompact ? "auto" : minimapSize,
             }}
             transition={toolbarTransition}
-            style={{ right: isCompact ? CORNER_RADIUS : TOOLBAR_MARGIN }}
+            style={{
+              right: isCompact ? CORNER_RADIUS : TOOLBAR_MARGIN,
+              opacity: placement.pointerOverToolbar ? 0.3 : 1,
+            }}
           >
             <StickerToolbar
               zoomRowRef={zoomRowRef}
