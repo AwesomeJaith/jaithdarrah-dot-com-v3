@@ -9,6 +9,7 @@ import { Sticker } from "./sticker"
 import { StickerInspector } from "./sticker-inspector"
 import { StickerToolbar } from "./sticker-toolbar"
 import { StickerMinimap } from "./sticker-minimap"
+import { CanvasBar } from "./canvas-bar"
 import { NotchFrame } from "@/components/ui/notch-frame"
 import {
   useCanvasPanZoom,
@@ -29,6 +30,7 @@ const MINIMAP_DEFAULT_SIZE = 120
 const TOOLBAR_MARGIN = 12
 const TOOLBAR_GAP = 6
 export const NOTCH_PAD = 6
+const CORNER_RADIUS = 14
 // Move minimap to top when the toolbar would overlap the expanded upload card.
 // The card is centered, so its right edge is at W/2 + notchWidth/2. The minimap
 // needs TOOLBAR_MARGIN clearance from the notch and from the container edge.
@@ -96,6 +98,7 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
   } = useCanvasPanZoom({
     isPlacing: placement.isPlacing,
     stickerPreviewUrl,
+    onPlacementPointerDown: placement.onPointerDown,
     onPlacementPointerMove: placement.onPointerMove,
     onPlacementConfirm: placement.onPointerConfirm,
     onPlacementWheel: placement.onWheel,
@@ -217,8 +220,8 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
     <NotchFrame
       className="bg-sticker-canvas"
       notchPad={NOTCH_PAD}
-      cornerRadius={14}
-      notchRadius={14}
+      cornerRadius={CORNER_RADIUS}
+      notchRadius={CORNER_RADIUS}
       notchContent={
         <UploadCard
           isPlacing={placement.isPlacing}
@@ -259,14 +262,15 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
             className="absolute z-40"
             initial={false}
             animate={{
-              top: toolbarTop,
-              width: minimapSize,
+              top: isCompact ? CORNER_RADIUS : toolbarTop,
+              width: isCompact ? "auto" : minimapSize,
             }}
             transition={toolbarTransition}
-            style={{ right: TOOLBAR_MARGIN }}
+            style={{ right: isCompact ? CORNER_RADIUS : TOOLBAR_MARGIN }}
           >
             <StickerToolbar
               zoomRowRef={zoomRowRef}
+              isCompact={isCompact}
               onZoomIn={() =>
                 setScale((s) => Math.min(MAX_SCALE, s * (1 + ZOOM_STEP)))
               }
@@ -286,44 +290,49 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                 setStickerMap(new Map(initialStickers.map((s) => [s.id, s])))
               }}
               minimap={
-                <motion.div
-                  className="overflow-hidden rounded-lg border border-border"
-                  initial={false}
-                  animate={{
-                    width: minimapSize,
-                    height: minimapSize,
-                  }}
-                  transition={toolbarTransition}
-                >
-                  <StickerMinimap
-                    stickers={stickers}
-                    translate={translate}
-                    scale={scale}
-                    containerSize={containerSize}
-                    size={minimapSize}
-                  />
-                </motion.div>
+                isCompact ? undefined : (
+                  <motion.div
+                    className="overflow-hidden rounded-lg border border-border"
+                    initial={false}
+                    animate={{
+                      width: minimapSize,
+                      height: minimapSize,
+                    }}
+                    transition={toolbarTransition}
+                  >
+                    <StickerMinimap
+                      stickers={stickers}
+                      translate={translate}
+                      scale={scale}
+                      containerSize={containerSize}
+                      size={minimapSize}
+                    />
+                  </motion.div>
+                )
               }
             />
           </motion.div>
 
           {/* Placement hint / confirm dialog */}
           {placement.isPlacing && stickerPreviewUrl && (
-            <div className="absolute top-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-sticker-border bg-sticker-panel p-1.5 text-sm text-popover-foreground shadow-md">
-              {placement.submitSuccess ? (
-                <span className="px-2.5 py-0.5 text-brand">
-                  Sticker submitted! It will appear once approved.
-                </span>
-              ) : placement.isSubmitting ? (
-                <span className="px-2.5 py-0.5">Submitting...</span>
-              ) : placement.overlapError ? (
-                <span className="px-2.5 py-0.5 text-destructive">
-                  Too much overlap with another sticker. Try a different spot!
-                </span>
-              ) : placement.pendingConfirm ? (
-                <>
-                  <span className="pl-2.5">Place here?</span>
-                  <div className="grid grid-cols-2 gap-1.5">
+            <div
+              className="absolute left-3.5 z-40 max-w-[calc(100%-4.5rem)] sm:left-1/2 sm:max-w-none sm:-translate-x-1/2"
+              style={{ top: CORNER_RADIUS }}
+            >
+              <CanvasBar>
+                {placement.submitSuccess ? (
+                  <span className="px-1.5 text-brand">
+                    Submitted! It will appear once approved.
+                  </span>
+                ) : placement.isSubmitting ? (
+                  <span className="px-1.5">Submitting...</span>
+                ) : placement.overlapError ? (
+                  <span className="px-1.5 text-destructive">
+                    Too much overlap — try a different spot!
+                  </span>
+                ) : placement.pendingConfirm ? (
+                  <>
+                    <span className="px-1.5">Place here?</span>
                     <Button size="sm" onClick={placement.confirmPlacement}>
                       Confirm
                     </Button>
@@ -334,13 +343,18 @@ export function StickerCanvas({ initialStickers }: StickerCanvasProps) {
                     >
                       Back
                     </Button>
-                  </div>
-                </>
-              ) : (
-                <span className="px-2.5 py-0.5">
-                  Click to place your sticker. Scroll to rotate.
-                </span>
-              )}
+                  </>
+                ) : (
+                  <span className="px-1.5">
+                    <span className="sm:hidden">
+                      Drag to position, release to place.
+                    </span>
+                    <span className="hidden sm:inline">
+                      Click to place your sticker. Scroll to rotate.
+                    </span>
+                  </span>
+                )}
+              </CanvasBar>
             </div>
           )}
 

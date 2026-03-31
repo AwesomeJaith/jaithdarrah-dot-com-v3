@@ -3,6 +3,7 @@
 import type { ReactNode, Ref } from "react"
 import { FaPlus, FaMinus, FaCompass } from "react-icons/fa6"
 import { Button } from "@/components/ui/button"
+import { CanvasBar } from "./canvas-bar"
 
 type StickerToolbarProps = {
   onZoomIn: () => void
@@ -10,6 +11,7 @@ type StickerToolbarProps = {
   onResetView: () => void
   minimap?: ReactNode
   zoomRowRef?: Ref<HTMLDivElement>
+  isCompact?: boolean
 }
 
 export function StickerToolbar({
@@ -18,7 +20,23 @@ export function StickerToolbar({
   onResetView,
   minimap,
   zoomRowRef,
+  isCompact,
 }: StickerToolbarProps) {
+  if (isCompact) {
+    return (
+      <CanvasBar ref={zoomRowRef}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onResetView}
+          aria-label="Reset view"
+        >
+          <FaCompass />
+        </Button>
+      </CanvasBar>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       {minimap}

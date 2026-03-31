@@ -14,6 +14,7 @@ const PAN_THRESHOLD = 5
 type UseCanvasPanZoomParams = {
   isPlacing: boolean
   stickerPreviewUrl: string | null
+  onPlacementPointerDown?: (isTouch: boolean) => void
   onPlacementPointerMove?: (screenX: number, screenY: number) => void
   onPlacementConfirm?: (screenX: number, screenY: number) => void
   onPlacementWheel?: (deltaY: number) => void
@@ -22,6 +23,7 @@ type UseCanvasPanZoomParams = {
 export function useCanvasPanZoom({
   isPlacing,
   stickerPreviewUrl,
+  onPlacementPointerDown,
   onPlacementPointerMove,
   onPlacementConfirm,
   onPlacementWheel,
@@ -66,12 +68,14 @@ export function useCanvasPanZoom({
 
   // Stable refs for placement callbacks (avoids stale closures in handlers)
   const placementActiveRef = useRef(false)
+  const placementPointerDownRef = useRef(onPlacementPointerDown)
   const placementPointerMoveRef = useRef(onPlacementPointerMove)
   const placementConfirmRef = useRef(onPlacementConfirm)
   const placementWheelRef = useRef(onPlacementWheel)
 
   useEffect(() => {
     placementActiveRef.current = isPlacing && !!stickerPreviewUrl
+    placementPointerDownRef.current = onPlacementPointerDown
     placementPointerMoveRef.current = onPlacementPointerMove
     placementConfirmRef.current = onPlacementConfirm
     placementWheelRef.current = onPlacementWheel
@@ -132,6 +136,8 @@ export function useCanvasPanZoom({
       }
 
       if (isPlacing && stickerPreviewUrl) {
+        const isTouch = e.pointerType === "touch"
+        placementPointerDownRef.current?.(isTouch)
         return
       }
 

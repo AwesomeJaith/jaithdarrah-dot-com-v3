@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { MORPH_SPEED, CARD_WIDTH, CARD_WIDTH_COMPACT } from "./constants"
@@ -80,14 +80,16 @@ export function UploadCard({
 
   // Track measured content heights per page
   const [pageHeights, setPageHeights] = useState<Record<string, number>>({})
-  const heightCallbacks = useRef(
-    Object.fromEntries(
-      (["upload", "help", "place", "message"] as const).map((key) => [
-        key,
-        (h: number) =>
-          setPageHeights((p) => (p[key] === h ? p : { ...p, [key]: h })),
-      ])
-    )
+  const heightCallbacks = useMemo(
+    () =>
+      Object.fromEntries(
+        (["upload", "help", "place", "message"] as const).map((key) => [
+          key,
+          (h: number) =>
+            setPageHeights((p) => (p[key] === h ? p : { ...p, [key]: h })),
+        ])
+      ),
+    []
   )
   const activePage = showUpload
     ? "upload"
@@ -153,7 +155,7 @@ export function UploadCard({
       <CardPage
         show={showUpload}
         cardWidth={cardWidth}
-        onHeight={heightCallbacks.current.upload}
+        onHeight={heightCallbacks.upload}
       >
         <UploadPage
           handleCardClose={handleCardClose}
@@ -174,7 +176,7 @@ export function UploadCard({
       <CardPage
         show={showHelp}
         cardWidth={cardWidth}
-        onHeight={heightCallbacks.current.help}
+        onHeight={heightCallbacks.help}
       >
         <HelpPage handleCardClose={handleCardClose} />
       </CardPage>
@@ -184,7 +186,7 @@ export function UploadCard({
         show={showPlace}
         cardWidth={cardWidth}
         minHeight={sharedMinHeight}
-        onHeight={heightCallbacks.current.place}
+        onHeight={heightCallbacks.place}
       >
         <PlacePage
           handleCardClose={handleCardClose}
@@ -198,7 +200,7 @@ export function UploadCard({
         show={showMessage}
         cardWidth={cardWidth}
         minHeight={sharedMinHeight}
-        onHeight={heightCallbacks.current.message}
+        onHeight={heightCallbacks.message}
       >
         <MessagePage
           handleCardClose={handleCardClose}

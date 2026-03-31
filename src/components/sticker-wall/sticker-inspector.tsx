@@ -80,6 +80,15 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
   // so the glare line can travel fully across the sticker
   const glareSweep = useTransform(springGlossX, [15, 85], [-20, 120])
 
+  // Hide glare when not tilting — fade based on distance from center
+  const glareOpacity = useTransform(
+    [springGlossX, springGlossY],
+    ([gx, gy]) => {
+      const dist = Math.hypot((gx as number) - 50, (gy as number) - 50)
+      return Math.min(dist / 10, 1)
+    }
+  )
+
   // Build the transform and gloss/holo gradients as motion templates
   const transformStyle = useMotionTemplate`rotateX(${springTiltX}deg) rotateY(${springTiltY}deg)`
   const glossGradient = useMotionTemplate`radial-gradient(circle at ${springGlossX}% ${springGlossY}%, rgba(255,255,255,0.8) 0%, transparent 65%)`
@@ -218,11 +227,12 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
                 rotation={sticker.rotation}
               />
             )}
-            {/* Glare line — pointer-driven shimmer stripe */}
+            {/* Glare line — pointer-driven shimmer stripe, hidden at rest */}
             <motion.div
               className="pointer-events-none absolute inset-0"
               style={{
                 background: glareGradient,
+                opacity: glareOpacity,
                 rotate: `${sticker.rotation}deg`,
                 ...effectMaskStyles(sticker.image_url),
               }}
@@ -275,7 +285,7 @@ export function StickerInspector({ sticker, onClose }: StickerInspectorProps) {
               {rainbowOverride ? "Make it normal." : "Make it rainbow!"}
             </TextMorph>
           </button>
-          <div className="rounded-b-xl border-t border-border bg-popover px-5 py-4 text-center">
+          <div className="rounded-b-xl bg-popover px-5 py-4 text-center">
             <p className="text-sm font-semibold text-popover-foreground">
               Placed by {sticker.username}
             </p>

@@ -126,7 +126,12 @@ export function useStickerPlacement({
   stickersRef,
 }: UseStickerPlacementParams) {
   const [isPlacing, setIsPlacing] = useState(false)
-  const [pendingConfirm, setPendingConfirm] = useState(false)
+  const [pendingConfirm, _setPendingConfirm] = useState(false)
+  const pendingConfirmRef = useRef(false)
+  const setPendingConfirm = useCallback((v: boolean) => {
+    pendingConfirmRef.current = v
+    _setPendingConfirm(v)
+  }, [])
   const [placementPos, setPlacementPos] = useState<{
     x: number
     y: number
@@ -260,16 +265,27 @@ export function useStickerPlacement({
   const onPointerMove = useCallback(
     (screenX: number, screenY: number) => {
       lastPointerScreenRef.current = { x: screenX, y: screenY }
-      if (pendingConfirm) return
+      if (pendingConfirmRef.current) return
       if (overlapError) setOverlapError(false)
       // Position is computed by the rAF tick loop (single source of truth)
     },
-    [pendingConfirm, overlapError]
+    [overlapError]
+  )
+
+  // On touch, tapping the canvas while confirm is showing picks the sticker back up
+  const onPointerDown = useCallback(
+    (isTouch: boolean) => {
+      if (isTouch && pendingConfirmRef.current && !isSubmitting) {
+        setPendingConfirm(false)
+        setOverlapError(false)
+      }
+    },
+    [isSubmitting, setPendingConfirm]
   )
 
   const onPointerConfirm = useCallback(
     (screenX: number, screenY: number) => {
-      if (pendingConfirm || isSubmitting) return
+      if (pendingConfirmRef.current || isSubmitting) return
       const world = panZoomRef.current.screenToWorld(screenX, screenY)
       setPlacementPos({
         x: world.x - placementSize.width / 2,
@@ -277,7 +293,7 @@ export function useStickerPlacement({
       })
       setPendingConfirm(true)
     },
-    [pendingConfirm, isSubmitting, placementSize]
+    [isSubmitting, placementSize, setPendingConfirm]
   )
 
   const cancelConfirm = useCallback(() => {
@@ -360,14 +376,11 @@ export function useStickerPlacement({
     onStickerSubmitted,
   ])
 
-  const onWheel = useCallback(
-    (deltaY: number) => {
-      if (pendingConfirm) return
-      const delta = deltaY > 0 ? 5 : -5
-      setPlacementRotation((prev) => prev + delta)
-    },
-    [pendingConfirm]
-  )
+  const onWheel = useCallback((deltaY: number) => {
+    if (pendingConfirmRef.current) return
+    const delta = deltaY > 0 ? 5 : -5
+    setPlacementRotation((prev) => prev + delta)
+  }, [])
 
   const cancelPlacement = useCallback(() => {
     resetAll()
@@ -407,6 +420,7 @@ export function useStickerPlacement({
     cancelConfirm,
     confirmPlacement,
     handleStickerProcessed,
+    onPointerDown,
     onPointerMove,
     onPointerConfirm,
     onWheel,

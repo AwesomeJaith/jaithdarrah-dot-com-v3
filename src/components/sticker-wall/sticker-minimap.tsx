@@ -15,6 +15,7 @@ const DEFAULT_SIZE = 120
 const PADDING = 8
 const ARROW_MARGIN = 10
 const ARROW_SIZE = 4
+const MIN_VIEWPORT_FRACTION = 0.67
 
 export function StickerMinimap({
   stickers,
@@ -34,11 +35,26 @@ export function StickerMinimap({
     }
   }, [containerSize, translate, scale])
 
-  // Determine scale: fit all stickers + viewport into the minimap
-  // Scale based on sticker extent from origin + viewport size — stable across panning
+  // Scale so the viewport indicator never gets too small.
+  // Stickers beyond the minimap edge are clipped — that's fine.
   const mapScale = useMemo(() => {
-    let extent = 200
+    const inner = minimapSize - PADDING * 2
 
+    // Ensure viewport rect is at least MIN_VIEWPORT_FRACTION of the minimap
+    let maxExtent = 100
+    if (containerSize) {
+      const viewportWorld = Math.max(
+        containerSize.width / scale,
+        containerSize.height / scale
+      )
+      const minScale = (inner * MIN_VIEWPORT_FRACTION) / viewportWorld
+      // extent that would produce this scale: inner / (extent * 2) = minScale
+      const maxViewportExtent = inner / (minScale * 2)
+      maxExtent = Math.max(maxExtent, maxViewportExtent)
+    }
+
+    // Fit stickers, but don't let them shrink below the viewport floor
+    let extent = 200
     for (const s of stickers) {
       extent = Math.max(
         extent,
@@ -46,8 +62,6 @@ export function StickerMinimap({
         Math.abs(s.y) + s.height
       )
     }
-
-    // Ensure the viewport rect fits in the minimap at current zoom
     if (containerSize) {
       extent = Math.max(
         extent,
@@ -56,7 +70,9 @@ export function StickerMinimap({
       )
     }
 
-    const inner = minimapSize - PADDING * 2
+    // Clamp: stickers can grow the extent, but not beyond what keeps the viewport readable
+    extent = Math.min(extent, maxExtent)
+
     return inner / (extent * 2)
   }, [stickers, containerSize, scale, minimapSize])
 
