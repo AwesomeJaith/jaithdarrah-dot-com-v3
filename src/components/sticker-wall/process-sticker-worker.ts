@@ -55,9 +55,7 @@ let avifEncode: (
 ) => Promise<ArrayBuffer>
 
 async function loadAvifEncoder() {
-  const mod = (await _cdn(
-    "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/encode.js/+esm"
-  )) as {
+  const mod = (await _cdn("https://esm.sh/@jsquash/avif@2.1.1/encode.js")) as {
     init: (wasm: WebAssembly.Module) => Promise<void>
     default: typeof avifEncode
   }
@@ -159,7 +157,7 @@ self.onmessage = async (e: MessageEvent<WorkerInput>) => {
 
   try {
     const { PipeMagic } = (await _cdn(
-      "https://cdn.jsdelivr.net/npm/pipemagic@0.1.4/+esm"
+      "https://esm.sh/pipemagic@0.1.4?bundle"
     )) as typeof import("pipemagic")
 
     const pm = new PipeMagic()

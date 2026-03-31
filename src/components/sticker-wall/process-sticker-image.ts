@@ -15,7 +15,7 @@ let avifEncode: typeof import("@jsquash/avif/encode").default
 
 async function loadAvifEncoder() {
   const mod = (await _cdn(
-    "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/encode.js/+esm"
+    "https://esm.sh/@jsquash/avif@2.1.1/encode.js"
   )) as typeof import("@jsquash/avif/encode")
   const wasmUrl =
     "https://cdn.jsdelivr.net/npm/@jsquash/avif@2.1.1/codec/enc/avif_enc.wasm"
@@ -113,7 +113,7 @@ export async function processStickerImage(
   }
 
   const { PipeMagic } = (await _cdn(
-    "https://cdn.jsdelivr.net/npm/pipemagic@0.1.4/+esm"
+    "https://esm.sh/pipemagic@0.1.4?bundle"
   )) as typeof import("pipemagic")
   const pm = new PipeMagic()
   const { blob } = await pm.run(preset, file, {
