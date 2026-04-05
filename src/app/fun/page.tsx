@@ -36,7 +36,6 @@ const funItems = [
     icon: <FaChessKnight className="text-4xl text-green-500" />,
     bgClass: "bg-green-500/10",
     bgImage: "/brilliant.png",
-    comingSoon: true,
   },
   {
     name: "Photo Gallery",
