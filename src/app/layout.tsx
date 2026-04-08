@@ -7,6 +7,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { LastUpdated } from "@/components/last-updated"
 import { cn } from "@/lib/utils"
+import { generateWebsiteSchema } from "@/lib/structured-data"
 
 const geist = Geist({
   subsets: ["latin"],
@@ -29,13 +30,50 @@ const fontGrotesk = Host_Grotesk({
 export const metadata: Metadata = {
   metadataBase: new URL("https://jaithdarrah.com"),
   title: {
-    default: "Jaith Darrah",
+    default: "Jaith Darrah - Full-Stack Software Engineer Specializing in Microservices & AI Integration",
     template: "%s | Jaith Darrah",
   },
   description:
-    "Software engineer obsessed with the details, building software that's fast, reliable, and beautiful.",
+    "Full-stack software engineer specializing in microservices architecture, AI integration, and scalable web applications. Expert in TypeScript, React, and backend systems. Available for contract work and open-source collaboration.",
+  keywords: "software engineer, microservices, AI integration, full-stack developer, TypeScript, React, contract work, open source",
+  authors: [{ name: "Jaith Darrah" }],
+  creator: "Jaith Darrah",
+  publisher: "Jaith Darrah",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://jaithdarrah.com",
+    title: "Jaith Darrah - Full-Stack Software Engineer Specializing in Microservices & AI Integration",
+    description: "Full-stack software engineer specializing in microservices architecture, AI integration, and scalable web applications. Expert in TypeScript, React, and backend systems.",
+    siteName: "Jaith Darrah",
+    images: [
+      {
+        url: "/open-graph-cat.png",
+        width: 1200,
+        height: 630,
+        alt: "Jaith Darrah - Full-Stack Software Engineer",
+      }
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Jaith Darrah - Full-Stack Software Engineer Specializing in Microservices & AI Integration",
+    description: "Full-stack software engineer specializing in microservices architecture, AI integration, and scalable web applications.",
     images: ["/open-graph-cat.png"],
+  },
+  alternates: {
+    canonical: "https://jaithdarrah.com",
   },
 }
 
@@ -44,6 +82,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const websiteSchema = generateWebsiteSchema()
+
   return (
     <html
       lang="en"
@@ -58,8 +98,14 @@ export default function RootLayout({
     >
       <head>
         <meta name="apple-mobile-web-app-title" content="Jaith Darrah" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="dns-prefetch" href="https://api.github.com" />
         <link rel="dns-prefetch" href="https://api.chess.com" />
+        <link rel="canonical" href="https://jaithdarrah.com" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
       </head>
       <body>
         <ThemeProvider>

@@ -12,6 +12,12 @@ function Header() {
           <CatLogo className="h-12 w-12 dark:fill-white" />
         </Link>
         <div className="flex gap-4">
+          <Link href="/blog" className="link-underline">
+            Blog
+          </Link>
+          <Link href="/ai-integration-specialist" className="link-underline">
+            Services
+          </Link>
           <Link href="/fun" className="link-underline">
             Fun
           </Link>

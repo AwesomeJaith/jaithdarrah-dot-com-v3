@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import Link from "next/link"
 import { EyeIcon } from "./eye-icon"
 import { GraduationBlurb } from "./graduation-blurb"
 
@@ -30,8 +31,7 @@ function AboutSection() {
             <Suspense>
               <GraduationBlurb />
             </Suspense>{" "}
-            Clash Royale, chess, code, and speed typing nerd.
-            {/** Links or some kind of interactivity like chess puzzles */}
+            I specialize in <Link href="/blog/microservices-architecture" className="text-primary hover:underline">microservices architecture</Link>, <Link href="/ai-integration-specialist" className="text-primary hover:underline">AI integration</Link>, and building scalable backend systems. When not coding, I'm a Clash Royale, chess, code, and speed typing nerd.
           </p>
         </div>
       </div>
